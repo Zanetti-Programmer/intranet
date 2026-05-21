@@ -1,0 +1,97 @@
+services:
+
+  # ── Banco de dados compartilhado ────────────────────────────────────────────
+  db:
+    image: mariadb:10.11
+    container_name: intranet_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: humhub
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - intranet
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  # ── HumHub – Intranet social ─────────────────────────────────────────────────
+  humhub:
+    image: mriedmann/humhub:latest
+    platform: linux/amd64
+    container_name: intranet_humhub
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      HUMHUB_DB_HOST: db
+      HUMHUB_DB_NAME: humhub
+      HUMHUB_DB_USER: ${DB_USER}
+      HUMHUB_DB_PASSWORD: ${DB_PASSWORD}
+      HUMHUB_AUTO_INSTALL: 1
+      HUMHUB_ADMIN_EMAIL: ${ADMIN_EMAIL}
+      HUMHUB_ADMIN_LOGIN: ${ADMIN_USER}
+      HUMHUB_ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      HUMHUB_NAME: ${SITE_NAME}
+      HUMHUB_MAILER_TRANSPORT: php
+    volumes:
+      - humhub_uploads:/var/www/localhost/htdocs/uploads
+      - humhub_config:/var/www/localhost/htdocs/protected/config
+      - humhub_modules:/var/www/localhost/htdocs/protected/modules
+    networks:
+      - intranet
+
+  # ── GLPI – Chamados de TI ────────────────────────────────────────────────────
+  glpi:
+    image: diouxx/glpi:latest
+    platform: linux/amd64
+    container_name: intranet_glpi
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      TIMEZONE: ${TIMEZONE}
+    volumes:
+      - glpi_files:/var/www/html/glpi/files
+      - glpi_plugins:/var/www/html/glpi/plugins
+    networks:
+      - intranet
+
+  # ── Nginx – Proxy reverso ────────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: intranet_proxy
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "8080:8080"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - humhub
+      - glpi
+    networks:
+      - intranet
+
+# ── Volumes persistentes ───────────────────────────────────────────────────────
+volumes:
+  db_data:
+  humhub_uploads:
+  humhub_config:
+  humhub_modules:
+  glpi_files:
+  glpi_plugins:
+
+# ── Rede interna ───────────────────────────────────────────────────────────────
+networks:
+  intranet:
+    driver: bridge

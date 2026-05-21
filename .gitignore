@@ -1,0 +1,8 @@
+# Variáveis de ambiente — nunca commitar senhas
+.env
+
+# Dados de runtime do Docker
+*.log
+
+# macOS
+.DS_Store
