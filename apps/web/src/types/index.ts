@@ -201,6 +201,82 @@ export interface UsefulLink {
   created: string;
 }
 
+export interface Article {
+  id: string;
+  title: string;
+  content: string;
+  cover?: string;
+  type: "news" | "blog";
+  tags?: string;
+  status: "published" | "draft";
+  author: string;
+  expand?: { author: User };
+  created: string;
+}
+
+export interface WallCard {
+  id: string;
+  message: string;
+  type: "parabens" | "boas_vindas" | "conquista" | "despedida" | "recado";
+  recipient?: string;
+  author: string;
+  emoji: string;
+  expand?: { author: User; recipient?: User };
+  created: string;
+}
+
+export interface Poll {
+  id: string;
+  question: string;
+  options: string[];
+  author: string;
+  expand?: { author: User };
+  deadline?: string;
+  status: "ativa" | "encerrada";
+  created: string;
+}
+
+export interface PollVote {
+  id: string;
+  poll: string;
+  user: string;
+  option_idx: number;
+  created: string;
+}
+
+export interface Training {
+  id: string;
+  title: string;
+  description?: string;
+  video_url?: string;
+  duration?: string;
+  category: string;
+  author: string;
+  expand?: { author: User };
+  created: string;
+}
+
+export interface TrainingCompletion {
+  id: string;
+  training: string;
+  user: string;
+  created: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  assignee: string;
+  created_by: string;
+  expand?: { assignee: User; created_by: User };
+  due_date?: string;
+  status: "pendente" | "em_andamento" | "concluida";
+  priority: "baixa" | "media" | "alta";
+  is_team: boolean;
+  created: string;
+}
+
 export interface MarketplaceItem {
   id: string;
   title: string;
