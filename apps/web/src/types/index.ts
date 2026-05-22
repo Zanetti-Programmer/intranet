@@ -61,12 +61,23 @@ export interface Announcement {
   created: string;
 }
 
+// ── Chat ──────────────────────────────────────────────────────────────────────
+
 export interface Channel {
   id: string;
   name: string;
-  space?: string;
   type: "channel" | "dm";
-  created_by: string;
+  description?: string;
+  space?: string;
+  created_by?: string;
+  expand?: { space?: Space };
+}
+
+export interface ChannelMember {
+  id: string;
+  channel: string;
+  user: string;
+  expand?: { user: User; channel: Channel };
 }
 
 export interface Message {
@@ -77,7 +88,18 @@ export interface Message {
   content: string;
   attachments?: string[];
   created: string;
+  updated: string;
 }
+
+export interface TypingStatus {
+  id: string;
+  channel: string;
+  user: string;
+  expand?: { user: User };
+  updated: string;
+}
+
+// ── Tickets ───────────────────────────────────────────────────────────────────
 
 export interface Ticket {
   id: string;
@@ -92,6 +114,8 @@ export interface Ticket {
   created: string;
   updated: string;
 }
+
+// ── Achievements & Marketplace ────────────────────────────────────────────────
 
 export interface Achievement {
   id: string;

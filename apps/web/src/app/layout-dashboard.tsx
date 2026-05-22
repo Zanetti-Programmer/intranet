@@ -2,6 +2,7 @@
 import { Suspense } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
+import { cn } from "@/lib/utils";
 
 const PAGE_TITLES: Record<string, string> = {
   "/":              "Início",
@@ -16,22 +17,28 @@ const PAGE_TITLES: Record<string, string> = {
   "/perfil":        "Meu Perfil",
 };
 
+function getTitle(pathname: string) {
+  if (pathname.startsWith("/chat")) return "Chat";
+  return PAGE_TITLES[pathname] ?? "Intranet";
+}
+
 export function DashboardLayout({
   children,
   pathname,
+  fullHeight = false,
 }: {
   children: React.ReactNode;
   pathname: string;
+  fullHeight?: boolean;
 }) {
-  const title = PAGE_TITLES[pathname] ?? "Intranet";
   return (
     <div className="flex h-screen overflow-hidden">
       <Suspense fallback={<div className="w-14 h-screen bg-sidebar border-r border-sidebar-border shrink-0" />}>
         <Sidebar />
       </Suspense>
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Topbar title={title} />
-        <main className="flex-1 overflow-y-auto">
+        <Topbar title={getTitle(pathname)} />
+        <main className={cn("flex-1 overflow-hidden", !fullHeight && "overflow-y-auto")}>
           <Suspense>{children}</Suspense>
         </main>
       </div>

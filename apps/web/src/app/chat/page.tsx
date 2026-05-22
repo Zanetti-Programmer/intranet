@@ -2,15 +2,17 @@
 export const dynamic = "force-dynamic";
 
 import { usePathname } from "next/navigation";
+import { Suspense } from "react";
 import { DashboardLayout } from "../layout-dashboard";
+import { ChatShell } from "./ChatShell";
 
-export default function Page() {
+export default function ChatPage() {
   const pathname = usePathname();
   return (
-    <DashboardLayout pathname={pathname}>
-      <div className="max-w-3xl mx-auto px-5 py-6">
-        <p className="text-muted-foreground">Em construção...</p>
-      </div>
+    <DashboardLayout pathname={pathname} fullHeight>
+      <Suspense>
+        <ChatShell activeChannelId={null} />
+      </Suspense>
     </DashboardLayout>
   );
 }
