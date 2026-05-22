@@ -1,9 +1,7 @@
 /// <reference path="../pb_data/types.d.ts" />
+// Em PocketBase v0.22 o código no nível raiz executa automaticamente após o bootstrap
 
-onBootstrap((e) => {
-    e.next()
-
-    // ── Grupo 1: Feed + Espaços ────────────────────────────────────────────────
+// ── Grupo 1: Feed + Espaços ────────────────────────────────────────────────
     let hasSpaces = false
     try { $app.dao().findCollectionByNameOrId("spaces"); hasSpaces = true } catch (_) {}
     if (!hasSpaces) {
@@ -62,7 +60,6 @@ onBootstrap((e) => {
             createMarketplaceItems()
         } catch (err) { console.error("[setup] Erro mídia:", err) }
     }
-})
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // GRUPO 1 — FEED
@@ -355,6 +352,6 @@ function createMarketplaceItems() {
     col.schema.addField(new SchemaField({ name:"author", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
     col.schema.addField(new SchemaField({ name:"status", type:"select", options:{maxSelect:1,values:["disponivel","reservado","vendido"]} }))
     col.schema.addField(new SchemaField({ name:"category", type:"text" }))
-    col.schema.addField(new SchemaField({ name:"contact_via_dm", type:"bool" }))
+    col.schema.addField(new SchemaField({ name:"contact_dm", type:"bool" }))
     $app.dao().saveCollection(col)
 }

@@ -64,7 +64,7 @@ export default function ClassificadosPage() {
     if (!title.trim()) return;
     setFormLoading(true);
     try {
-      await createItem({ title, description, price: Number(price) || 0, category, contact_via_dm: true, photos: photos.length ? photos : undefined });
+      await createItem({ title, description, price: Number(price) || 0, category, contact_dm: true, photos: photos.length ? photos : undefined });
       setTitle(""); setDescription(""); setPrice(""); setCategory(""); setPhotos([]); setPreviews([]);
       setShowForm(false);
     } finally { setFormLoading(false); }

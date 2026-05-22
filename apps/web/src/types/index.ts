@@ -139,6 +139,6 @@ export interface MarketplaceItem {
   expand?: { author: User };
   status: "disponivel" | "vendido" | "reservado";
   category: string;
-  contact_via_dm: boolean;
+  contact_dm: boolean;
   created: string;
 }

@@ -34,7 +34,7 @@ export function useClassifieds(statusFilter?: string) {
 
   const createItem = useCallback(async (data: {
     title: string; description: string; price: number;
-    category: string; contact_via_dm: boolean; photos?: File[];
+    category: string; contact_dm: boolean; photos?: File[];
   }) => {
     const pb = getPocketBase();
     const formData = new FormData();
@@ -42,7 +42,7 @@ export function useClassifieds(statusFilter?: string) {
     formData.append("description", data.description);
     formData.append("price", String(data.price));
     formData.append("category", data.category);
-    formData.append("contact_via_dm", String(data.contact_via_dm));
+    formData.append("contact_dm", String(data.contact_dm));
     formData.append("status", "disponivel");
     formData.append("author", pb.authStore.record!.id);
     data.photos?.forEach((f) => formData.append("photos", f));
