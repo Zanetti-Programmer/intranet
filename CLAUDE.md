@@ -2,64 +2,205 @@
 
 ## O que é este projeto
 
-Intranet corporativa open source baseada em **HumHub** (rede social interna) + **GLPI** (chamados de TI), orquestrada via Docker Compose com nginx como proxy reverso.
+Intranet corporativa completa com visual de rede social, desenvolvida com **Next.js 15** no frontend e **PocketBase** como backend (auth + banco SQLite + realtime + storage de arquivos). Tudo orquestrado via Docker Compose com nginx como proxy reverso.
 
-## Decisões de arquitetura
+> **Este projeto foi completamente reescrito.** O CLAUDE.md anterior descrevia uma versão baseada em HumHub + GLPI que foi abandonada. A versão atual é 100% customizada.
 
-- **HumHub** escolhido por ser a plataforma open source mais completa de intranet social (PHP/Yii2, fácil de customizar e hospedar).
-- **GLPI** para gestão de chamados de TI — padrão ITIL, em português, com SLA e agentes.
-- **MariaDB 10.11** compartilhado entre os dois sistemas (bancos separados: `humhub` e `glpi`).
-- **nginx** como reverse proxy: HumHub na porta 80, GLPI na porta 8080.
-- O GLPI serve da raiz `/` internamente — não funciona em subpath, por isso porta separada.
-- Imagem `mriedmann/humhub` (community, Alpine) e `diouxx/glpi` com `platform: linux/amd64` (emulação Rosetta no Mac Apple Silicon).
+---
 
-## Stack
+## Arquitetura atual
+
+```
+Internet / Rede local
+        │
+   nginx :80
+   ┌─────┴──────────┐
+   │                │
+Next.js :3000   PocketBase :8090
+                    │
+               SQLite (pb_data volume)
+```
 
 | Serviço | Imagem | Porta interna | Porta externa |
 |---|---|---|---|
-| nginx (proxy) | nginx:alpine | 80 / 8080 | 80 / 8080 |
-| HumHub | mriedmann/humhub:latest | 80 | via nginx:80 |
-| GLPI | diouxx/glpi:latest | 80 | via nginx:8080 |
-| MariaDB | mariadb:10.11 | 3306 | — |
+| nginx (proxy) | nginx:alpine | 80 | 80 |
+| Next.js (frontend) | build local | 3000 | via nginx `/` |
+| PocketBase (backend) | build local | 8090 | via nginx `/pb` |
 
-## Variáveis de ambiente
+---
 
-Copiar `.env.example` para `.env` e preencher antes de subir. O `.env` nunca deve ser commitado.
+## Stack técnica
+
+- **Frontend:** Next.js 15+ App Router, React, Tailwind CSS, Framer Motion, Lucide React v1.16.0, shadcn/ui
+- **Backend:** PocketBase (Go) — auth JWT, SQLite, realtime subscriptions via SSE, file storage
+- **Infra:** Docker Compose, nginx reverse proxy
+- **Padrão de componentes:** `"use client"` + `export const dynamic = "force-dynamic"` em todas as páginas
+
+---
+
+## Estrutura do projeto
+
+```
+intranet/
+├── docker-compose.yml
+├── .env / .env.example
+├── nginx/nginx.conf
+├── pocketbase/Dockerfile
+└── apps/web/                        ← Next.js app
+    ├── src/
+    │   ├── app/                     ← 27 rotas (App Router)
+    │   │   ├── page.tsx             ← Feed (home)
+    │   │   ├── login/
+    │   │   ├── admin/
+    │   │   ├── noticias/            ← articles (type=news)
+    │   │   ├── blog/                ← articles (type=blog)
+    │   │   ├── mural/               ← wall_cards
+    │   │   ├── pesquisas/           ← polls + poll_votes
+    │   │   ├── treinamentos/        ← trainings + training_completions
+    │   │   ├── tarefas/             ← tasks (kanban)
+    │   │   ├── grupos/              ← spaces
+    │   │   ├── relatorios/          ← leitura de collections (admin/rh)
+    │   │   ├── chat/                ← channels + messages
+    │   │   ├── chamados/            ← tickets
+    │   │   ├── wiki/                ← wiki_articles
+    │   │   ├── galeria/             ← gallery_albums + gallery_photos
+    │   │   ├── vagas/               ← job_postings + job_applications
+    │   │   ├── classificados/       ← marketplace_items
+    │   │   ├── beneficios/          ← benefits
+    │   │   ├── conquistas/          ← achievements
+    │   │   ├── aniversariantes/     ← users (birthday filter)
+    │   │   ├── organograma/         ← users (hierarquia)
+    │   │   ├── documentos/          ← documents
+    │   │   ├── links/               ← useful_links
+    │   │   ├── pessoas/             ← users
+    │   │   ├── perfil/              ← users (próprio perfil)
+    │   │   ├── avisos/              ← announcements
+    │   │   └── calendario/          ← events
+    │   ├── components/
+    │   │   ├── layout/              ← Sidebar, Topbar
+    │   │   ├── shared/              ← UserAvatar, ComingSoonPage
+    │   │   └── ui/                  ← shadcn/ui (Button, Input, etc.)
+    │   ├── lib/
+    │   │   ├── hooks/               ← um hook por domínio (useArticles, useMural, etc.)
+    │   │   ├── pocketbase.ts        ← singleton getPocketBase()
+    │   │   └── utils.ts             ← cn(), pbFileUrl()
+    │   └── types/index.ts           ← todas as interfaces TypeScript
+    └── Dockerfile
+```
+
+---
+
+## Convenções de código
+
+### Padrão de página
+
+```tsx
+"use client";
+export const dynamic = "force-dynamic";
+
+import { DashboardLayout } from "../layout-dashboard";
+import { useXxx } from "@/lib/hooks/useXxx";
+
+export default function XxxPage() {
+  const pathname = usePathname();
+  return (
+    <DashboardLayout pathname={pathname}>
+      {/* conteúdo */}
+    </DashboardLayout>
+  );
+}
+```
+
+### Padrão de hook
+
+```tsx
+"use client";
+import { useEffect, useState, useCallback } from "react";
+import getPocketBase from "@/lib/pocketbase";
+
+export function useXxx() {
+  const [items, setItems] = useState([]);
+  const fetchAll = useCallback(async () => { /* ... */ }, []);
+  useEffect(() => {
+    fetchAll();
+    const pb = getPocketBase();
+    pb.collection("xxx").subscribe("*", () => fetchAll()).catch(() => {});
+    return () => { pb.collection("xxx").unsubscribe("*").catch(() => {}); };
+  }, [fetchAll]);
+  return { items, /* CRUD functions */ };
+}
+```
+
+### Utilitários
+
+- `getPocketBase()` — singleton do client PocketBase
+- `pbFileUrl(collection, id, filename, size?)` — URL de arquivo com thumb
+- `cn(...classes)` — clsx/tailwind merge
+- `toast.success/error` — feedback via sonner
+
+### Permissões de papel (role)
+
+| role | Permissões extras |
+|---|---|
+| `admin` | tudo |
+| `rh` | criar notícias, blog, avisos, enquetes, vagas, benefícios, ver relatórios |
+| `ti` | criar blog, treinamentos, chamados |
+| `user` | leitura geral + posts + mural + tarefas pessoais |
+
+---
 
 ## Como subir o ambiente
 
 ```bash
 cp .env.example .env
-# editar .env com as senhas reais
+# editar .env com as credenciais
 docker compose up -d
-docker compose logs -f
 ```
 
-## Primeiro acesso ao GLPI
+### Variáveis essenciais
 
-O GLPI exige wizard de instalação no primeiro boot. Dados do banco:
-- Host: `db`
-- Banco: `glpi`
-- Usuário/Senha: conforme `.env` (DB_USER / DB_PASSWORD)
+```env
+PB_ADMIN_EMAIL=admin@empresa.com
+PB_ADMIN_PASSWORD=SenhaForte@2024
+NEXT_PUBLIC_PB_URL=http://localhost/pb
+HTTP_PORT=80
+```
 
-Após instalar: trocar a senha padrão `glpi`/`glpi`.
+### Painel admin do PocketBase
 
-## Funcionalidades planejadas (ainda não implementadas)
+Disponível em `http://localhost/pb/_/` após subir.
 
-Ver README.md para a lista completa de features desejadas e roadmap.
+---
 
-## Módulos HumHub a instalar
+## Rebuild do frontend
 
-Acessar `http://localhost/marketplace` após login admin:
-- Calendar (gratuito)
-- Tasks (gratuito)
-- Chat (gratuito)
-- Gallery (gratuito)
-- Polls (gratuito)
+```bash
+docker compose up -d --build web
+```
 
-## Customizações futuras planejadas
+---
 
-- Módulo PHP custom para widget do Instagram (Instagram Graph API)
-- Módulo de marketplace interno (classificados de itens da empresa)
-- Mural de conquistas / badges de RH customizados
-- Integração HumHub ↔ GLPI via link no menu de navegação
+## Collections PocketBase (principais)
+
+| Collection | Usado em |
+|---|---|
+| `users` | perfil, pessoas, organograma, aniversariantes |
+| `posts` | feed (home) |
+| `spaces` | grupos, feed filtrado |
+| `articles` | /noticias (type=news) e /blog (type=blog) |
+| `wall_cards` | /mural |
+| `polls` + `poll_votes` | /pesquisas |
+| `trainings` + `training_completions` | /treinamentos |
+| `tasks` | /tarefas |
+| `tickets` + `ticket_comments` | /chamados |
+| `channels` + `messages` | /chat |
+| `wiki_articles` | /wiki |
+| `gallery_albums` + `gallery_photos` | /galeria |
+| `job_postings` + `job_applications` | /vagas |
+| `marketplace_items` | /classificados |
+| `benefits` | /beneficios |
+| `achievements` | /conquistas |
+| `announcements` | /avisos |
+| `events` | /calendario |
+| `documents` | /documentos |
+| `useful_links` | /links |
