@@ -1,183 +1,92 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
   Home, MessageSquare, Calendar, Users, Megaphone,
-  Ticket, Image, ShoppingBag, Trophy, Building2,
-  ChevronRight, BookOpen, Zap, Briefcase, FileText, Menu,
+  Ticket, Image, ShoppingBag, Trophy, Zap, Send,
+  Star, Settings, Briefcase,
 } from "lucide-react";
-import { useState } from "react";
 import { useSpaces } from "@/lib/hooks/useSpaces";
 
-const NAV = [
-  {
-    label: null,
-    items: [
-      { href: "/", icon: Home, label: "Home Pages", hasArrow: true, highlight: true },
-    ],
-  },
-  {
-    label: "COMMUNITY",
-    items: [
-      { href: "/avisos",   icon: BookOpen,       label: "Avisos" },
-      { href: "/",         icon: Zap,            label: "Atividade" },
-      { href: "/chat",     icon: MessageSquare,  label: "Mensagens" },
-      { href: "/pessoas",  icon: Users,          label: "Membros" },
-      { href: "/",         icon: Users,          label: "Grupos", hasArrow: true },
-      { href: "/chamados", icon: FileText,       label: "Fóruns" },
-      { href: "/calendario",icon: Calendar,      label: "Eventos", hasArrow: true },
-      { href: "/galeria",  icon: Image,          label: "Documentos" },
-    ],
-  },
-  {
-    label: "FERRAMENTAS",
-    items: [
-      { href: "/chamados",   icon: Ticket,    label: "Chamados TI", hasArrow: true },
-      { href: "/conquistas", icon: Trophy,    label: "Conquistas",  hasArrow: true },
-    ],
-  },
-  {
-    label: "MÍDIA",
-    items: [
-      { href: "/galeria",       icon: Image,       label: "Galeria" },
-      { href: "/classificados", icon: ShoppingBag, label: "Classificados" },
-    ],
-  },
+// Grupos de ícones separados por pontos — igual ao Alliance
+const GROUPS = [
+  [
+    { href: "/",             icon: Home,          label: "Início" },
+  ],
+  [
+    { href: "/chat",         icon: MessageSquare, label: "Mensagens" },
+    { href: "/avisos",       icon: Megaphone,     label: "Avisos" },
+    { href: "/pessoas",      icon: Users,         label: "Membros" },
+    { href: "/chamados",     icon: Ticket,        label: "Chamados" },
+    { href: "/calendario",   icon: Calendar,      label: "Calendário" },
+    { href: "/galeria",      icon: Image,         label: "Galeria" },
+  ],
+  [
+    { href: "/conquistas",   icon: Star,          label: "Conquistas" },
+    { href: "/classificados",icon: ShoppingBag,   label: "Classificados" },
+  ],
 ];
+
+function Dot() {
+  return (
+    <div className="flex flex-col items-center gap-1 py-2">
+      {[0,1,2].map(i => <span key={i} className="w-1 h-1 rounded-full bg-sidebar-foreground/20" />)}
+    </div>
+  );
+}
 
 export function Sidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const [collapsed, setCollapsed] = useState(false);
-  const { spaces } = useSpaces();
   const activeSpace = searchParams?.get("space") ?? "";
 
-  function isActive(href: string, label: string) {
-    if (label === "Atividade" || label === "Grupos") return pathname === "/" && !activeSpace;
-    if (href === "/") return pathname === "/" && !activeSpace && label === "Home Pages";
+  function isActive(href: string) {
+    if (href === "/") return pathname === "/" && !activeSpace;
     return pathname.startsWith(href);
   }
 
-  function handleSpaceClick(id: string) {
-    const p = new URLSearchParams(searchParams?.toString());
-    if (activeSpace === id) p.delete("space"); else p.set("space", id);
-    router.push(`/?${p.toString()}`);
-  }
-
   return (
-    <motion.aside
-      animate={{ width: collapsed ? 56 : 210 }}
-      transition={{ duration: 0.2, ease: "easeInOut" }}
-      className="relative flex flex-col h-screen bg-sidebar border-r border-sidebar-border shrink-0 overflow-hidden"
-    >
-      {/* Logo */}
-      <div className={cn(
-        "flex items-center gap-2.5 h-14 border-b border-sidebar-border shrink-0 px-4",
-        collapsed && "justify-center px-0"
-      )}>
-        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/25">
-          <Building2 className="w-4 h-4 text-primary-foreground" />
+    <aside className="flex flex-col h-screen w-[52px] bg-sidebar border-r border-sidebar-border shrink-0 overflow-hidden">
+      {/* Logo icon */}
+      <div className="flex items-center justify-center h-14 border-b border-sidebar-border shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
+          <Home className="w-4 h-4 text-primary-foreground" />
         </div>
-        <AnimatePresence>
-          {!collapsed && (
-            <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="font-bold text-sidebar-foreground text-sm tracking-tight whitespace-nowrap">
-              INTRANET
-            </motion.span>
-          )}
-        </AnimatePresence>
-        {!collapsed && (
-          <button onClick={() => setCollapsed(true)} className="ml-auto text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors">
-            <Menu className="w-4 h-4" />
-          </button>
-        )}
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 py-2 overflow-y-auto">
-        {NAV.map((section, si) => (
-          <div key={si} className={si > 0 ? "mt-4" : ""}>
-            <AnimatePresence>
-              {!collapsed && section.label && (
-                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="px-4 pt-1 pb-1.5 text-[9.5px] font-bold uppercase tracking-[0.15em] text-sidebar-foreground/35 select-none">
-                  {section.label}
-                </motion.p>
-              )}
-            </AnimatePresence>
-
-            {section.items.map(({ href, icon: Icon, label, hasArrow }) => {
-              const active = isActive(href, label);
+      {/* Nav groups */}
+      <nav className="flex-1 flex flex-col items-center py-3 overflow-y-auto gap-0.5">
+        {GROUPS.map((group, gi) => (
+          <div key={gi} className="w-full flex flex-col items-center">
+            {gi > 0 && <Dot />}
+            {group.map(({ href, icon: Icon, label }) => {
+              const active = isActive(href);
               return (
-                <Link key={`${href}-${label}`} href={href}
-                  className={cn(
-                    "flex items-center gap-2.5 mx-2 px-2.5 py-2 rounded-lg text-[13px] transition-all",
-                    active
-                      ? "bg-primary/20 text-primary font-medium"
-                      : "text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-                    collapsed && "justify-center mx-1 px-0 py-2.5"
-                  )}
-                  title={collapsed ? label : undefined}
+                <Link
+                  key={href}
+                  href={href}
+                  title={label}
+                  className="relative w-full flex items-center justify-center h-10 group"
                 >
-                  <Icon className={cn("w-4 h-4 shrink-0", active && "text-primary")} />
-                  <AnimatePresence>
-                    {!collapsed && (
-                      <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="flex-1 truncate">
-                        {label}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                  {!collapsed && hasArrow && (
-                    <ChevronRight className="w-3.5 h-3.5 text-sidebar-foreground/30 shrink-0" />
+                  {/* Active indicator — left blue bar */}
+                  {active && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 bg-primary rounded-r-full" />
                   )}
+                  <div className={cn(
+                    "w-9 h-9 flex items-center justify-center rounded-xl transition-all",
+                    active
+                      ? "text-primary"
+                      : "text-sidebar-foreground/45 group-hover:text-sidebar-foreground group-hover:bg-sidebar-accent/50"
+                  )}>
+                    <Icon className="w-[18px] h-[18px]" strokeWidth={active ? 2.5 : 1.8} />
+                  </div>
                 </Link>
               );
             })}
           </div>
         ))}
-
-        {/* Spaces */}
-        <AnimatePresence>
-          {!collapsed && spaces.length > 0 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="mt-4">
-              <p className="px-4 pt-1 pb-1.5 text-[9.5px] font-bold uppercase tracking-[0.15em] text-sidebar-foreground/35 select-none">
-                Espaços
-              </p>
-              {spaces.map((s) => {
-                const active = activeSpace === s.id;
-                return (
-                  <button key={s.id} onClick={() => handleSpaceClick(s.id)}
-                    className={cn(
-                      "w-full flex items-center gap-2.5 mx-2 px-2.5 py-2 rounded-lg text-[13px] transition-all text-left",
-                      active
-                        ? "bg-primary/20 text-primary font-medium"
-                        : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                    )}
-                    style={{ width: "calc(100% - 16px)" }}
-                  >
-                    <span className="text-sm leading-none">{s.icon}</span>
-                    <span className="flex-1 truncate">{s.name}</span>
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-                  </button>
-                );
-              })}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </nav>
-
-      {/* Expand button when collapsed */}
-      {collapsed && (
-        <button onClick={() => setCollapsed(false)}
-          className="mx-auto mb-4 w-8 h-8 flex items-center justify-center rounded-lg text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors">
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      )}
-    </motion.aside>
+    </aside>
   );
 }

@@ -1,17 +1,22 @@
 "use client";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { PostComposer } from "@/components/feed/PostComposer";
 import { PostCard } from "@/components/feed/PostCard";
-import { AnnouncementBanner } from "@/components/feed/AnnouncementBanner";
 import { AnnouncementsWidget } from "@/components/feed/AnnouncementsWidget";
-import { GroupDiscussionsCard, LatestNewsCard } from "@/components/feed/GroupDiscussionsCard";
+import { GroupDiscussionsCard, LatestNewsCard, TeamMembersCard } from "@/components/feed/GroupDiscussionsCard";
 import { SpacesWidget } from "@/components/feed/SpacesWidget";
+import { HeroPostCard, FromTheBlogCard } from "@/components/feed/FromTheBlogCard";
+import { WhoIsOnlineCard } from "@/components/widgets/WhoIsOnlineCard";
+import { TopEventsCard } from "@/components/widgets/TopEventsCard";
+import { MiniCalendarWidget } from "@/components/widgets/MiniCalendarWidget";
+import { ProgressBarsCard } from "@/components/widgets/ProgressBarsCard";
 import { usePosts } from "@/lib/hooks/usePosts";
 import { useSpaces } from "@/lib/hooks/useSpaces";
 import { useAnnouncements } from "@/lib/hooks/useAnnouncements";
-import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
+import type { Post } from "@/types";
+import getPocketBase from "@/lib/pocketbase";
 
 function FeedInner() {
   const searchParams = useSearchParams();
@@ -21,73 +26,105 @@ function FeedInner() {
   const { posts, loading, createPost, deletePost } = usePosts(spaceFilter);
   const { announcements } = useAnnouncements();
 
-  const currentSpace = spaces.find((s) => s.id === spaceFilter);
+  // Posts with images for "From The Blog"
+  const [blogPosts, setBlogPosts] = useState<Post[]>([]);
+  useEffect(() => {
+    const pb = getPocketBase();
+    if (!pb.authStore.isValid) return;
+    pb.collection("posts").getList(1, 4, { sort: "-created", expand: "author" })
+      .then((r) => {
+        const withImages = (r.items as unknown as Post[]).filter(
+          p => p.attachments && p.attachments.length > 0
+        );
+        setBlogPosts(withImages.slice(0, 3));
+      }).catch(() => {});
+  }, []);
+
+  const heroPosts = posts.filter(p => p.attachments && p.attachments.length > 0).slice(0, 1);
 
   return (
-    /* Wrapper com padding e scroll para o conteúdo inteiro */
     <div className="h-full overflow-y-auto">
-      <div className="max-w-[1280px] mx-auto px-5 py-5">
+      <div className="max-w-[1400px] mx-auto px-5 py-5">
         <div className="flex gap-5 items-start">
 
-          {/* ── Coluna esquerda (Group Discussions + Latest News) ── */}
-          <div className="hidden lg:flex flex-col gap-4 w-[260px] xl:w-[280px] shrink-0 sticky top-0">
+          {/* ── COLUNA ESQUERDA ────────────────────────────── */}
+          <div className="hidden lg:flex flex-col gap-5 w-[270px] xl:w-[290px] shrink-0">
             <GroupDiscussionsCard />
             <LatestNewsCard announcements={announcements} />
+            <TeamMembersCard />
           </div>
 
-          {/* ── Coluna central (Feed) ── */}
-          <div className="flex-1 min-w-0 space-y-4">
+          {/* ── COLUNA CENTRAL ────────────────────────────── */}
+          <div className="flex-1 min-w-0 space-y-5">
 
-            {/* Cabeçalho do espaço ativo */}
-            {currentSpace && (
-              <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 bg-card border border-border rounded-2xl px-5 py-3.5">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xl"
-                  style={{ backgroundColor: `${currentSpace.color}20` }}>
-                  {currentSpace.icon}
-                </div>
-                <div>
-                  <h2 className="font-bold text-sm">{currentSpace.name}</h2>
-                  <p className="text-xs text-muted-foreground">{currentSpace.description}</p>
-                </div>
-              </motion.div>
-            )}
+            {/* Post Composer */}
+            <PostComposer
+              spaces={spaces}
+              defaultSpaceId={spaceFilter ?? undefined}
+              onSubmit={createPost}
+            />
 
-            {/* Avisos urgentes inline */}
-            {announcements.some(a => a.priority === "urgent") && (
-              <AnnouncementBanner announcements={announcements.filter(a => a.priority === "urgent")} />
-            )}
-
-            {/* Composer */}
-            <PostComposer spaces={spaces} defaultSpaceId={spaceFilter ?? undefined} onSubmit={createPost} />
-
-            {/* Posts */}
+            {/* Activity Feed */}
             {loading ? (
-              <div className="flex justify-center py-16">
+              <div className="flex justify-center py-12">
                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
               </div>
             ) : posts.length === 0 ? (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="text-center py-20 space-y-3">
+              <div className="bg-card border border-border rounded-2xl p-12 text-center space-y-2">
                 <p className="text-4xl">✨</p>
                 <p className="text-sm font-semibold">Nenhuma publicação ainda</p>
                 <p className="text-xs text-muted-foreground">Seja o primeiro a postar!</p>
-              </motion.div>
+              </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {posts.map((post) => (
-                  <PostCard key={post.id} post={post}
+                  <PostCard
+                    key={post.id}
+                    post={post}
                     space={spaces.find((s) => s.id === post.space)}
-                    onDelete={deletePost} />
+                    onDelete={deletePost}
+                  />
                 ))}
               </div>
             )}
+
+            {/* Hero post (featured article) */}
+            {heroPosts.length > 0 && (
+              <HeroPostCard post={heroPosts[0]} />
+            )}
+
+            {/* From The Blog */}
+            {blogPosts.length > 0 && (
+              <FromTheBlogCard posts={blogPosts} />
+            )}
+
+            {/* LOAD MORE */}
+            {posts.length > 0 && (
+              <button className="w-full py-4 rounded-2xl bg-primary text-primary-foreground text-sm font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors">
+                LOAD MORE
+              </button>
+            )}
           </div>
 
-          {/* ── Coluna direita (Newsletter + Groups) ── */}
-          <div className="hidden xl:flex flex-col gap-4 w-[260px] shrink-0 sticky top-0">
+          {/* ── COLUNA DIREITA ────────────────────────────── */}
+          <div className="hidden xl:flex flex-col gap-5 w-[270px] shrink-0">
+            {/* Newsletter / Avisos */}
             <AnnouncementsWidget announcements={announcements} />
+
+            {/* Groups com tabs */}
             <SpacesWidget />
+
+            {/* Who's Online */}
+            <WhoIsOnlineCard />
+
+            {/* Top Events */}
+            <TopEventsCard />
+
+            {/* Mini Calendar */}
+            <MiniCalendarWidget />
+
+            {/* Progress Bar */}
+            <ProgressBarsCard />
           </div>
 
         </div>

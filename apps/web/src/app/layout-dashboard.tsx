@@ -7,24 +7,6 @@ import { cn } from "@/lib/utils";
 import getPocketBase from "@/lib/pocketbase";
 import { Loader2 } from "lucide-react";
 
-const PAGE_TITLES: Record<string, string> = {
-  "/":              "Início",
-  "/avisos":        "Avisos",
-  "/calendario":    "Calendário",
-  "/pessoas":       "Pessoas",
-  "/chamados":      "Chamados TI",
-  "/galeria":       "Galeria",
-  "/classificados": "Classificados",
-  "/conquistas":    "Conquistas",
-  "/perfil":        "Meu Perfil",
-};
-
-function getTitle(pathname: string) {
-  if (pathname.startsWith("/chat")) return "Chat";
-  if (pathname.startsWith("/chamados")) return "Chamados TI";
-  return PAGE_TITLES[pathname] ?? "Intranet";
-}
-
 export function DashboardLayout({
   children,
   pathname,
@@ -52,11 +34,11 @@ export function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Suspense fallback={<div className="w-[60px] h-screen bg-sidebar border-r border-sidebar-border shrink-0" />}>
+      <Suspense fallback={<div className="w-[52px] h-screen bg-sidebar border-r border-sidebar-border shrink-0" />}>
         <Sidebar />
       </Suspense>
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Topbar title={getTitle(pathname)} />
+        <Topbar title="" />
         <main className={cn(
           "flex-1 min-h-0",
           fullHeight ? "overflow-hidden" : "overflow-y-auto"
