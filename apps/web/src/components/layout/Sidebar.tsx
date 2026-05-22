@@ -3,37 +3,99 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import type { LucideProps } from "lucide-react";
+import getPocketBase from "@/lib/pocketbase";
 import {
-  Home, Bell, MessageSquare, Users, Image, Calendar,
-  ShoppingBag, Star, User, Briefcase, Menu, PanelLeftClose,
+  Home, Bell, MessageSquare, Newspaper, BookOpen, LayoutGrid,
+  Users, GitBranch, Cake, Briefcase, Gift, BarChart2,
+  Image, ShoppingBag, Star, Calendar,
+  FileText, BookMarked, GraduationCap,
+  Layers, CheckSquare, Link2,
+  User, LifeBuoy, ShieldCheck, PieChart,
+  Menu, PanelLeftClose,
 } from "lucide-react";
 
-const GROUPS: { href: string; icon: React.ForwardRefExoticComponent<LucideProps>; label: string }[][] = [
-  [
-    { href: "/",              icon: Home,          label: "Início" },
-  ],
-  [
-    { href: "/avisos",        icon: Bell,          label: "Avisos" },
-    { href: "/chat",          icon: MessageSquare, label: "Chat" },
-    { href: "/pessoas",       icon: Users,         label: "Pessoas" },
-    { href: "/galeria",       icon: Image,         label: "Galeria" },
-    { href: "/calendario",    icon: Calendar,      label: "Calendário" },
-    { href: "/classificados", icon: ShoppingBag,   label: "Classificados" },
-  ],
-  [
-    { href: "/conquistas",    icon: Star,          label: "Conquistas" },
-    { href: "/perfil",        icon: User,          label: "Perfil" },
-  ],
-  [
-    { href: "/chamados",      icon: Briefcase,     label: "Chamados" },
-  ],
+type NavItem = {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  adminOnly?: boolean;
+};
+
+type NavSection = {
+  label?: string;
+  items: NavItem[];
+};
+
+const SECTIONS: NavSection[] = [
+  {
+    items: [{ href: "/", icon: Home, label: "Início" }],
+  },
+  {
+    label: "Comunicação",
+    items: [
+      { href: "/avisos",   icon: Bell,          label: "Avisos" },
+      { href: "/chat",     icon: MessageSquare, label: "Chat" },
+      { href: "/noticias", icon: Newspaper,     label: "Notícias" },
+      { href: "/blog",     icon: BookOpen,      label: "Blog" },
+      { href: "/mural",    icon: LayoutGrid,    label: "Mural" },
+    ],
+  },
+  {
+    label: "RH & Pessoas",
+    items: [
+      { href: "/pessoas",          icon: Users,      label: "Pessoas" },
+      { href: "/organograma",      icon: GitBranch,  label: "Organograma" },
+      { href: "/aniversariantes",  icon: Cake,       label: "Aniversariantes" },
+      { href: "/vagas",            icon: Briefcase,  label: "Vagas" },
+      { href: "/beneficios",       icon: Gift,       label: "Benefícios" },
+      { href: "/pesquisas",        icon: BarChart2,  label: "Pesquisas" },
+    ],
+  },
+  {
+    label: "Conteúdo",
+    items: [
+      { href: "/galeria",       icon: Image,       label: "Galeria" },
+      { href: "/classificados", icon: ShoppingBag, label: "Classificados" },
+      { href: "/conquistas",    icon: Star,        label: "Conquistas" },
+      { href: "/calendario",    icon: Calendar,    label: "Calendário" },
+    ],
+  },
+  {
+    label: "Conhecimento",
+    items: [
+      { href: "/documentos",   icon: FileText,       label: "Documentos" },
+      { href: "/wiki",         icon: BookMarked,     label: "Wiki" },
+      { href: "/treinamentos", icon: GraduationCap,  label: "Treinamentos" },
+    ],
+  },
+  {
+    label: "Colaboração",
+    items: [
+      { href: "/grupos",  icon: Layers,       label: "Grupos" },
+      { href: "/tarefas", icon: CheckSquare,  label: "Tarefas" },
+      { href: "/links",   icon: Link2,        label: "Links Úteis" },
+    ],
+  },
+  {
+    items: [{ href: "/perfil", icon: User, label: "Perfil" }],
+  },
+  {
+    label: "TI & Admin",
+    items: [
+      { href: "/chamados",   icon: LifeBuoy,    label: "Chamados" },
+      { href: "/admin",      icon: ShieldCheck, label: "Admin",      adminOnly: true },
+      { href: "/relatorios", icon: PieChart,    label: "Relatórios", adminOnly: true },
+    ],
+  },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [pinned, setPinned] = useState(false);
   const [hovered, setHovered] = useState(false);
+
+  const myRole = (getPocketBase().authStore.record as { role?: string })?.role;
+  const isAdmin = myRole === "admin";
 
   useEffect(() => {
     if (localStorage.getItem("sidebar-pinned") === "true") setPinned(true);
@@ -64,56 +126,70 @@ export function Sidebar() {
     >
       {/* Header */}
       <div className="flex items-center h-[56px] border-b border-sidebar-border shrink-0 px-2 gap-2">
-        <button
-          onClick={togglePin}
-          title={pinned ? "Desfixar menu" : "Fixar menu aberto"}
-          className="w-[36px] h-[36px] flex items-center justify-center rounded-xl text-sidebar-foreground/50 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground transition-all shrink-0"
-        >
-          {pinned
-            ? <PanelLeftClose style={{ width: 18, height: 18 }} />
-            : <Menu style={{ width: 18, height: 18 }} />
-          }
-        </button>
-        {expanded && (
-          <Link href="/" className="font-semibold text-sm text-sidebar-foreground/80 truncate hover:text-sidebar-foreground transition-colors">
-            Intranet
-          </Link>
+        {expanded ? (
+          <>
+            <Link href="/" className="w-[32px] h-[32px] rounded-xl bg-primary flex items-center justify-center shrink-0 hover:opacity-90 transition-opacity">
+              <Home className="text-primary-foreground" style={{ width: 15, height: 15 }} />
+            </Link>
+            <span className="font-semibold text-sm text-sidebar-foreground/80 truncate flex-1">Intranet</span>
+            <button
+              onClick={togglePin}
+              title="Fechar menu fixo"
+              className="w-[28px] h-[28px] flex items-center justify-center rounded-lg text-sidebar-foreground/40 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground transition-all shrink-0"
+            >
+              <PanelLeftClose style={{ width: 16, height: 16 }} />
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={togglePin}
+            title="Fixar menu aberto"
+            className="w-[36px] h-[36px] flex items-center justify-center rounded-xl text-sidebar-foreground/60 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground transition-all shrink-0"
+          >
+            <Menu style={{ width: 18, height: 18 }} />
+          </button>
         )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden pt-2 pb-4 text-sidebar-foreground">
-        {GROUPS.map((group, gi) => (
-          <div key={gi} className="w-full">
-            {gi > 0 && (
+      <nav className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden pt-1 pb-4 text-sidebar-foreground">
+        {SECTIONS.map((section, si) => (
+          <div key={si} className="w-full">
+            {si > 0 && (
               <div className={cn(
-                "border-t border-sidebar-border/50 my-1.5 transition-[margin] duration-200",
+                "border-t border-sidebar-border/40 mt-1",
                 expanded ? "mx-3" : "mx-2"
               )} />
             )}
-            {group.map(({ href, icon: Icon, label }) => {
+            {expanded && section.label && (
+              <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/30 px-3 pt-2 pb-0.5 truncate">
+                {section.label}
+              </p>
+            )}
+            {section.items.map(({ href, icon: Icon, label, adminOnly }) => {
+              if (adminOnly && !isAdmin) return null;
               const active = isActive(href);
               return (
                 <Link
                   key={href}
                   href={href}
                   title={!expanded ? label : undefined}
-                  className="relative flex items-center py-[3px] px-2 group"
+                  className="relative flex items-center py-[2px] px-2 group"
                 >
                   {active && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[28px] bg-primary rounded-r-full" />
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[26px] bg-primary rounded-r-full" />
                   )}
                   <div className={cn(
-                    "flex items-center justify-center w-[36px] h-[36px] rounded-xl transition-all duration-150 shrink-0",
+                    "flex items-center justify-center w-[36px] h-[34px] rounded-xl transition-all duration-150 shrink-0",
                     active
                       ? "bg-primary/20 text-primary"
-                      : "text-sidebar-foreground/45 group-hover:bg-sidebar-foreground/10 group-hover:text-sidebar-foreground/80"
+                      : "text-sidebar-foreground/65 group-hover:bg-sidebar-foreground/10 group-hover:text-sidebar-foreground"
                   )}>
-                    <Icon style={{ width: 18, height: 18 }} strokeWidth={active ? 2.2 : 1.7} />
+                    <Icon style={{ width: 17, height: 17 }} strokeWidth={active ? 2.2 : 1.7} />
                   </div>
                   {expanded && (
                     <span className={cn(
-                      "ml-2 text-sm truncate transition-opacity duration-150",
+                      "ml-2 text-sm truncate",
                       active ? "text-primary font-medium" : "text-sidebar-foreground/70"
                     )}>
                       {label}

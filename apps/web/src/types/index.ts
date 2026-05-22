@@ -130,6 +130,17 @@ export interface Achievement {
   public: boolean;
 }
 
+export interface Document {
+  id: string;
+  title: string;
+  description?: string;
+  file: string;
+  category: string;
+  author: string;
+  expand?: { author: User };
+  created: string;
+}
+
 export interface MarketplaceItem {
   id: string;
   title: string;

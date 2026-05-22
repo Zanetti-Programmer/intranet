@@ -52,6 +52,7 @@ function FeedInner() {
             <GroupDiscussionsCard />
             <LatestNewsCard announcements={announcements} />
             <TeamMembersCard />
+            <TopEventsCard />
           </div>
 
           {/* ── COLUNA CENTRAL ────────────────────────────── */}
@@ -116,9 +117,6 @@ function FeedInner() {
 
             {/* Who's Online */}
             <WhoIsOnlineCard />
-
-            {/* Top Events */}
-            <TopEventsCard />
 
             {/* Mini Calendar */}
             <MiniCalendarWidget />
