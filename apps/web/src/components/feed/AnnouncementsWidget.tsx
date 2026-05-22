@@ -1,36 +1,47 @@
 "use client";
-import { Megaphone, AlertTriangle } from "lucide-react";
+import { Bell, Info } from "lucide-react";
 import type { Announcement } from "@/types";
-import { formatDistanceToNow } from "@/lib/utils";
-
-const PRIORITY_COLOR: Record<string, string> = {
-  urgent: "text-red-400",
-  high:   "text-amber-400",
-  normal: "text-blue-400",
-};
+import Link from "next/link";
 
 export function AnnouncementsWidget({ announcements }: { announcements: Announcement[] }) {
-  if (!announcements.length) return null;
-
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-        <Megaphone className="w-4 h-4 text-primary" />
-        <h3 className="font-semibold text-sm">Avisos Importantes</h3>
+      {/* Header — Newsletter style */}
+      <div className="px-5 pt-6 pb-5 text-center border-b border-border/60">
+        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+          <Bell className="w-7 h-7 text-primary" />
+        </div>
+        <h3 className="text-xl font-bold tracking-tight">Avisos</h3>
+        <p className="text-xs text-muted-foreground mt-1">Fique por dentro do que acontece</p>
       </div>
-      <div className="divide-y divide-border">
-        {announcements.slice(0, 4).map((a) => (
-          <div key={a.id} className="px-4 py-3 space-y-1">
-            <div className="flex items-start gap-1.5">
-              {a.priority === "urgent" && <AlertTriangle className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />}
-              <p className={`text-xs font-semibold leading-snug ${PRIORITY_COLOR[a.priority] ?? PRIORITY_COLOR.normal}`}>
-                {a.title}
+
+      {/* Announcements list */}
+      {announcements.length > 0 ? (
+        <div className="divide-y divide-border/50">
+          {announcements.slice(0, 3).map((a) => (
+            <div key={a.id} className="px-5 py-3.5 space-y-0.5">
+              <p className={`text-xs font-semibold leading-snug ${
+                a.priority === "urgent" ? "text-red-400" :
+                a.priority === "high" ? "text-amber-400" : "text-foreground"
+              }`}>
+                {a.priority === "urgent" && "🔴 "}{a.title}
               </p>
+              <p className="text-[11px] text-muted-foreground line-clamp-2">{a.content}</p>
             </div>
-            <p className="text-[11px] text-muted-foreground line-clamp-2">{a.content}</p>
-            <p className="text-[10px] text-muted-foreground/60">{formatDistanceToNow(a.created)}</p>
-          </div>
-        ))}
+          ))}
+        </div>
+      ) : (
+        <div className="px-5 py-6 text-center">
+          <p className="text-xs text-muted-foreground">Sem avisos no momento</p>
+        </div>
+      )}
+
+      {/* Footer link */}
+      <div className="px-5 py-3 border-t border-border/60">
+        <Link href="/avisos" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors">
+          <Info className="w-3.5 h-3.5" />
+          <span>Ver todos os avisos</span>
+        </Link>
       </div>
     </div>
   );
