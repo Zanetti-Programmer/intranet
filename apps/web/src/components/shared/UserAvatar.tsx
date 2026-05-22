@@ -1,8 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
+import { cn, getPBBaseUrl } from "@/lib/utils";
 import type { User } from "@/types";
-
-const PB_URL = process.env.NEXT_PUBLIC_PB_URL ?? "http://localhost/pb";
 
 function initials(name?: string) {
   if (!name) return "?";
@@ -11,7 +9,7 @@ function initials(name?: string) {
 
 function avatarUrl(user: Pick<User, "id" | "avatar">) {
   if (!user.avatar) return undefined;
-  return `${PB_URL}/api/files/users/${user.id}/${user.avatar}?thumb=80x80`;
+  return `${getPBBaseUrl()}/api/files/users/${user.id}/${user.avatar}?thumb=80x80`;
 }
 
 const COLORS = [

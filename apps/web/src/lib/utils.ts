@@ -17,8 +17,14 @@ export function formatDistanceToNow(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("pt-BR", { day: "numeric", month: "short" });
 }
 
+/** URL base do PocketBase — funciona no browser (qualquer host) e no SSR */
+export function getPBBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_PB_URL) return process.env.NEXT_PUBLIC_PB_URL;
+  if (typeof window !== "undefined") return `${window.location.origin}/pb`;
+  return "http://localhost/pb";
+}
+
 export function pbFileUrl(collection: string, recordId: string, filename: string, thumb?: string) {
-  const base = process.env.NEXT_PUBLIC_PB_URL ?? "http://localhost/pb";
-  const url = `${base}/api/files/${collection}/${recordId}/${filename}`;
+  const url = `${getPBBaseUrl()}/api/files/${collection}/${recordId}/${filename}`;
   return thumb ? `${url}?thumb=${thumb}` : url;
 }

@@ -12,9 +12,7 @@ import {
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { formatDistanceToNow } from "@/lib/utils";
-
-const PB_URL = process.env.NEXT_PUBLIC_PB_URL ?? "http://localhost/pb";
+import { formatDistanceToNow, getPBBaseUrl } from "@/lib/utils";
 
 function initials(name?: string) {
   if (!name) return "?";
@@ -29,7 +27,7 @@ export function Topbar({ title }: { title?: string }) {
   const [notifOpen, setNotifOpen] = useState(false);
 
   const avatarUrl = user?.avatar
-    ? `${PB_URL}/api/files/users/${user.id}/${user.avatar}?thumb=40x40`
+    ? `${getPBBaseUrl()}/api/files/users/${user.id}/${user.avatar}?thumb=40x40`
     : undefined;
 
   function handleLogout() { logout(); router.push("/login"); }
