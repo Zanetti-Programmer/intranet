@@ -6,3 +6,11 @@
 
 # macOS
 .DS_Store
+
+# Node
+node_modules/
+apps/web/.next/
+apps/web/out/
+
+# PocketBase data
+pb_data/
