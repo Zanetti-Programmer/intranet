@@ -53,19 +53,17 @@ export function Topbar({ title }: { title?: string }) {
 
         {/* Avatar / menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-accent/50 transition-colors">
-              <Avatar className="w-7 h-7">
-                <AvatarImage src={user ? getAvatarUrl(user) : undefined} />
-                <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                  {initials(user?.name)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="hidden sm:block text-left">
-                <p className="text-xs font-medium leading-none">{user?.name ?? "Usuário"}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">{user?.department ?? user?.role}</p>
-              </div>
-            </button>
+          <DropdownMenuTrigger className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-accent/50 transition-colors outline-none">
+            <Avatar className="w-7 h-7">
+              <AvatarImage src={user ? getAvatarUrl(user) : undefined} />
+              <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                {initials(user?.name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="hidden sm:block text-left">
+              <p className="text-xs font-medium leading-none">{user?.name ?? "Usuário"}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{user?.department ?? user?.role}</p>
+            </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem onClick={() => router.push("/perfil")}>

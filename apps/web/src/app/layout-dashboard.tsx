@@ -1,4 +1,5 @@
 "use client";
+import { Suspense } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 
@@ -25,10 +26,14 @@ export function DashboardLayout({
   const title = PAGE_TITLES[pathname] ?? "Intranet";
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+      <Suspense fallback={<div className="w-14 h-screen bg-sidebar border-r border-sidebar-border shrink-0" />}>
+        <Sidebar />
+      </Suspense>
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Topbar title={title} />
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto">
+          <Suspense>{children}</Suspense>
+        </main>
       </div>
     </div>
   );

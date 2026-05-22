@@ -2,9 +2,14 @@ services:
 
   # ── PocketBase — backend (auth + DB + realtime + storage) ──────────────────
   pocketbase:
-    image: ghcr.io/muchobear/pocketbase:latest
+    build:
+      context: ./pocketbase
+      dockerfile: Dockerfile
     container_name: intranet_pb
     restart: unless-stopped
+    environment:
+      PB_ADMIN_EMAIL: ${PB_ADMIN_EMAIL:-admin@empresa.com}
+      PB_ADMIN_PASSWORD: ${PB_ADMIN_PASSWORD:-Admin@2024}
     volumes:
       - pb_data:/pb/pb_data
     networks:
@@ -13,8 +18,8 @@ services:
       test: ["CMD", "wget", "-qO-", "http://localhost:8090/api/health"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 10s
+      retries: 10
+      start_period: 15s
 
   # ── Next.js — frontend ─────────────────────────────────────────────────────
   web:
@@ -27,7 +32,7 @@ services:
       pocketbase:
         condition: service_healthy
     environment:
-      NEXT_PUBLIC_PB_URL: http://localhost/pb
+      NEXT_PUBLIC_PB_URL: ${NEXT_PUBLIC_PB_URL:-http://localhost/pb}
     networks:
       - intranet
 
