@@ -1,25 +1,68 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import getPocketBase from "@/lib/pocketbase";
 import type { Announcement } from "@/types";
 
 export function useAnnouncements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchAll = useCallback(async () => {
     const pb = getPocketBase();
     if (!pb.authStore.isValid) return;
-
-    const today = new Date().toISOString();
-    pb.collection("announcements")
-      .getFullList({
-        sort: "-created",
+    try {
+      const items = await pb.collection("announcements").getFullList({
+        sort: "-pinned,-created",
         expand: "author",
-        filter: `pinned = true && (expires = "" || expires >= "${today}")`,
-      })
-      .then((r) => setAnnouncements(r as unknown as Announcement[]))
-      .catch(() => {});
+      });
+      setAnnouncements(items as unknown as Announcement[]);
+    } catch {
+      setAnnouncements([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { announcements };
+  useEffect(() => {
+    fetchAll();
+    const pb = getPocketBase();
+    pb.collection("announcements").subscribe("*", async (e) => {
+      if (e.action === "create") {
+        try {
+          const full = await pb.collection("announcements").getOne(e.record.id, { expand: "author" });
+          setAnnouncements((prev) => {
+            const next = [full as unknown as Announcement, ...prev];
+            return next.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+          });
+        } catch {}
+      } else if (e.action === "delete") {
+        setAnnouncements((prev) => prev.filter((a) => a.id !== e.record.id));
+      } else if (e.action === "update") {
+        fetchAll();
+      }
+    }).catch(() => {});
+    return () => {
+      pb.collection("announcements").unsubscribe("*").catch(() => {});
+    };
+  }, [fetchAll]);
+
+  const createAnnouncement = useCallback(async (data: {
+    title: string;
+    body: string;
+    category: string;
+    priority: string;
+    pinned: boolean;
+  }) => {
+    const pb = getPocketBase();
+    await pb.collection("announcements").create({
+      title: data.title,
+      content: data.body,
+      category: data.category,
+      priority: data.priority,
+      pinned: data.pinned,
+      author: pb.authStore.record!.id,
+    });
+  }, []);
+
+  return { announcements, loading, createAnnouncement };
 }
