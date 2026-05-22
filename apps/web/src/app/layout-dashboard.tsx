@@ -1,8 +1,11 @@
 "use client";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { cn } from "@/lib/utils";
+import getPocketBase from "@/lib/pocketbase";
+import { Loader2 } from "lucide-react";
 
 const PAGE_TITLES: Record<string, string> = {
   "/":              "Início",
@@ -19,6 +22,7 @@ const PAGE_TITLES: Record<string, string> = {
 
 function getTitle(pathname: string) {
   if (pathname.startsWith("/chat")) return "Chat";
+  if (pathname.startsWith("/chamados")) return "Chamados TI";
   return PAGE_TITLES[pathname] ?? "Intranet";
 }
 
@@ -31,6 +35,24 @@ export function DashboardLayout({
   pathname: string;
   fullHeight?: boolean;
 }) {
+  const router = useRouter();
+
+  useEffect(() => {
+    const pb = getPocketBase();
+    if (!pb.authStore.isValid) {
+      router.replace("/login");
+    }
+  }, [router]);
+
+  const pb = getPocketBase();
+  if (!pb.authStore.isValid) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Suspense fallback={<div className="w-14 h-screen bg-sidebar border-r border-sidebar-border shrink-0" />}>

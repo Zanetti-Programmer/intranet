@@ -1,18 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/login"];
-
-export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
-  const token = request.cookies.get("pb_auth")?.value;
-
-  if (!isPublic && !token) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-  if (isPublic && token) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
+// Auth é gerenciada pelo PocketBase SDK no localStorage (client-side).
+// O proxy apenas passa as requisições — proteção de rotas fica no DashboardLayout.
+export function proxy(_request: NextRequest) {
   return NextResponse.next();
 }
 

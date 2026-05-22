@@ -25,6 +25,7 @@ export function useAuth() {
       setLoading(true);
       try {
         await pb.collection("users").authWithPassword(email, password);
+        // authStore agora válido — componentes que usam isValid() vão re-renderizar
       } finally {
         setLoading(false);
       }

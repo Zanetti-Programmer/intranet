@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Building2, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import getPocketBase from "@/lib/pocketbase";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,11 +17,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // Se já está autenticado, redireciona direto
+  useEffect(() => {
+    if (getPocketBase().authStore.isValid) {
+      router.replace("/");
+    }
+  }, [router]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
       await login(email, password);
-      router.push("/");
+      router.replace("/");
     } catch {
       toast.error("E-mail ou senha incorretos");
     }
