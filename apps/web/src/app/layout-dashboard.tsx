@@ -9,7 +9,6 @@ import { Loader2 } from "lucide-react";
 
 const PAGE_TITLES: Record<string, string> = {
   "/":              "Início",
-  "/chat":          "Chat",
   "/avisos":        "Avisos",
   "/calendario":    "Calendário",
   "/pessoas":       "Pessoas",
@@ -38,14 +37,12 @@ export function DashboardLayout({
   const router = useRouter();
 
   useEffect(() => {
-    const pb = getPocketBase();
-    if (!pb.authStore.isValid) {
+    if (!getPocketBase().authStore.isValid) {
       router.replace("/login");
     }
   }, [router]);
 
-  const pb = getPocketBase();
-  if (!pb.authStore.isValid) {
+  if (!getPocketBase().authStore.isValid) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -55,12 +52,15 @@ export function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Suspense fallback={<div className="w-14 h-screen bg-sidebar border-r border-sidebar-border shrink-0" />}>
+      <Suspense fallback={<div className="w-[60px] h-screen bg-sidebar border-r border-sidebar-border shrink-0" />}>
         <Sidebar />
       </Suspense>
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Topbar title={getTitle(pathname)} />
-        <main className={cn("flex-1 overflow-hidden", !fullHeight && "overflow-y-auto")}>
+        <main className={cn(
+          "flex-1 min-h-0",
+          fullHeight ? "overflow-hidden" : "overflow-y-auto"
+        )}>
           <Suspense>{children}</Suspense>
         </main>
       </div>
