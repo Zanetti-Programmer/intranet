@@ -1,6 +1,9 @@
 "use client";
 import { useState } from "react";
-import { Menu, Search, MessageSquare, Bell, ChevronDown, Sun, Moon, LogOut, User as UserIcon } from "lucide-react";
+import {
+  Menu, Search, MessageCircle, Bell, ChevronDown,
+  LogOut, User as UserIcon, Sun, Moon, Globe,
+} from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useNotifications } from "@/lib/hooks/useAchievements";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,7 +15,6 @@ import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatDistanceToNow, getPBBaseUrl } from "@/lib/utils";
-import { cn } from "@/lib/utils";
 
 function initials(name?: string) {
   if (!name) return "?";
@@ -25,58 +27,70 @@ export function Topbar({ title: _title }: { title?: string }) {
   const router = useRouter();
   const { count, notifications, markAllRead } = useNotifications();
   const [notifOpen, setNotifOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch]   = useState("");
 
   const avatarUrl = user?.avatar
     ? `${getPBBaseUrl()}/api/files/users/${user.id}/${user.avatar}?thumb=40x40`
     : undefined;
 
   return (
-    <header className="h-[56px] border-b border-border bg-background flex items-center gap-0 px-0 shrink-0 z-10">
-
-      {/* Hamburger — separado por borda */}
+    <header
+      className="flex items-center h-[56px] border-b border-border bg-background shrink-0 z-20"
+      style={{ paddingLeft: 0, paddingRight: 0 }}
+    >
+      {/* ── Hamburger ─────────────────────── */}
       <div className="flex items-center justify-center w-[52px] h-full border-r border-border shrink-0">
         <button className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-          <Menu className="w-5 h-5" />
+          <Menu className="w-[18px] h-[18px]" strokeWidth={1.8} />
         </button>
       </div>
 
-      {/* Search bar */}
-      <div className="flex-1 relative px-4 max-w-lg">
-        <Search className="absolute left-7 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+      {/* ── Search bar ──────────────────────── */}
+      <div className="flex items-center gap-2 flex-1 px-4 max-w-sm">
+        <Search className="w-4 h-4 text-muted-foreground/50 shrink-0" strokeWidth={1.8} />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Start typing to search..."
-          className="w-full h-9 pl-10 pr-4 rounded-xl bg-transparent border-0 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:bg-muted/50 transition-all"
+          className="flex-1 bg-transparent border-0 text-sm text-foreground placeholder:text-muted-foreground/45 focus:outline-none"
         />
       </div>
 
-      {/* Right actions */}
-      <div className="flex items-center gap-1 px-3 ml-auto">
-        {/* Theme */}
-        <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="w-9 h-9 flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-          {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+      {/* ── Right side ──────────────────────── */}
+      <div className="flex items-center gap-0.5 px-3 ml-auto">
+
+        {/* Language selector (estático, só visual) */}
+        <button className="hidden md:flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+          <Globe className="w-4 h-4" strokeWidth={1.8} />
+          <span className="font-medium">Português</span>
+          <ChevronDown className="w-3 h-3" />
         </button>
 
-        {/* Chat icon */}
+        {/* Theme */}
+        <button
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          {theme === "dark"
+            ? <Sun className="w-[18px] h-[18px]" strokeWidth={1.8} />
+            : <Moon className="w-[18px] h-[18px]" strokeWidth={1.8} />}
+        </button>
+
+        {/* Chat icon — igual Alliance */}
         <Link href="/chat"
-          className="w-9 h-9 flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-          <MessageSquare className="w-4 h-4" />
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+          <MessageCircle className="w-[18px] h-[18px]" strokeWidth={1.8} />
         </Link>
 
-        {/* Notifications bell */}
+        {/* Bell icon */}
         <div className="relative">
           <button
             onClick={() => { setNotifOpen((v) => !v); if (count > 0) markAllRead(); }}
-            className={cn(
-              "w-9 h-9 flex items-center justify-center rounded-xl transition-colors relative",
-              notifOpen ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"
-            )}>
-            <Bell className="w-4 h-4" />
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors relative"
+          >
+            <Bell className="w-[18px] h-[18px]" strokeWidth={1.8} />
             {count > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
+              <span className="absolute top-1.5 right-1.5 w-[14px] h-[14px] rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
                 {count > 9 ? "9+" : count}
               </span>
             )}
@@ -107,35 +121,36 @@ export function Topbar({ title: _title }: { title?: string }) {
           )}
         </div>
 
-        {/* Divider */}
-        <div className="w-px h-6 bg-border mx-1" />
+        {/* Separator vertical */}
+        <div className="w-px h-5 bg-border mx-1.5" />
 
-        {/* User — "Hi, Nome ˅" */}
+        {/* User — "Hi, Nome ˅" exato do Alliance */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-2 rounded-xl px-2 py-1 hover:bg-muted transition-colors outline-none">
+          <DropdownMenuTrigger className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-muted transition-colors outline-none">
             <div className="relative">
               <Avatar className="w-8 h-8">
                 <AvatarImage src={avatarUrl} />
-                <AvatarFallback className="text-[11px] font-bold bg-primary text-primary-foreground">
+                <AvatarFallback className="text-[10px] font-bold bg-primary text-primary-foreground">
                   {initials(user?.name)}
                 </AvatarFallback>
               </Avatar>
-              {/* Online dot */}
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-background" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-[10px] h-[10px] rounded-full bg-green-500 border-2 border-background" />
             </div>
-            <div className="hidden sm:flex items-center gap-1">
+            <div className="hidden sm:flex items-baseline gap-1">
               <span className="text-xs text-muted-foreground">Hi,</span>
               <span className="text-xs font-semibold">{user?.name?.split(" ")[0] ?? "Usuário"}</span>
-              <ChevronDown className="w-3 h-3 text-muted-foreground" />
+              <ChevronDown className="w-3 h-3 text-muted-foreground ml-0.5" />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44 rounded-xl">
+          <DropdownMenuContent align="end" className="w-40 rounded-xl">
             <DropdownMenuItem onClick={() => router.push("/perfil")}>
-              <UserIcon className="w-3.5 h-3.5 mr-2" /> Meu Perfil
+              <UserIcon className="w-3.5 h-3.5 mr-2" /> Perfil
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => { logout(); router.push("/login"); }}
-              className="text-destructive focus:text-destructive">
+            <DropdownMenuItem
+              onClick={() => { logout(); router.push("/login"); }}
+              className="text-destructive focus:text-destructive"
+            >
               <LogOut className="w-3.5 h-3.5 mr-2" /> Sair
             </DropdownMenuItem>
           </DropdownMenuContent>
