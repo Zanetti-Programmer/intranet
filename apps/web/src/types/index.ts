@@ -141,6 +141,66 @@ export interface Document {
   created: string;
 }
 
+export interface JobPosting {
+  id: string;
+  title: string;
+  department?: string;
+  description: string;
+  requirements?: string;
+  type: "CLT" | "PJ" | "Estágio" | "Temporário";
+  deadline?: string;
+  status: "aberta" | "encerrada";
+  author: string;
+  expand?: { author: User };
+  created: string;
+}
+
+export interface JobApplication {
+  id: string;
+  job: string;
+  user: string;
+  expand?: { user: User };
+  message?: string;
+  status: "inscrito" | "em_analise" | "aprovado" | "reprovado";
+  created: string;
+}
+
+export interface Benefit {
+  id: string;
+  title: string;
+  description: string;
+  details?: string;
+  category: string;
+  icon: string;
+  link?: string;
+  author: string;
+  created: string;
+}
+
+export interface WikiArticle {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  tags?: string;
+  author: string;
+  expand?: { author: User };
+  created: string;
+  updated: string;
+}
+
+export interface UsefulLink {
+  id: string;
+  title: string;
+  url: string;
+  description?: string;
+  category: string;
+  icon?: string;
+  author: string;
+  order?: number;
+  created: string;
+}
+
 export interface MarketplaceItem {
   id: string;
   title: string;
