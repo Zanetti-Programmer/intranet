@@ -52,6 +52,6 @@ export function middleware(request: NextRequest) {
 export const config = {
   // Processa todas as rotas exceto arquivos estáticos e imagens otimizadas
   matcher: [
-    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|manifest\\.json|sw\\.js|icons/.*|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

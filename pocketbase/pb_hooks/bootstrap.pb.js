@@ -1,17 +1,12 @@
 /// <reference path="../pb_data/types.d.ts" />
-// Em PocketBase v0.22 o código no nível raiz executa automaticamente após o bootstrap
 
-// ── Patches de segurança (executam todo startup) ───────────────────────────────
-// Garante que deployments existentes recebam as regras corretas mesmo sem reinstalação
-try {
-    const usersCol = $app.dao().findCollectionByNameOrId("users")
-    const desiredRule = "@request.auth.id = id"
-    if (usersCol.updateRule !== desiredRule) {
-        usersCol.updateRule = desiredRule
-        $app.dao().saveCollection(usersCol)
-        console.log("[security] users.updateRule atualizado")
-    }
-} catch (err) { console.error("[security] Erro ao corrigir users.updateRule:", err) }
+// onBeforeServe fires after the DAO is initialized, before the HTTP server starts.
+// Top-level code runs before the DAO is ready, so ALL setup must live inside this hook.
+// NOTE: ServeEvent does not expose e.next() in PocketBase v0.22 JSVM — omit it.
+$app.onBeforeServe().add(function(_e) {
+
+// ── Patches de segurança + extensão de users (ONE save only) ─────────────────
+patchUsersCollection()
 
 try {
     const ticketsCol = $app.dao().findCollectionByNameOrId("tickets")
@@ -19,7 +14,7 @@ try {
     if (ticketsCol.updateRule !== desiredRule) {
         ticketsCol.updateRule = desiredRule
         $app.dao().saveCollection(ticketsCol)
-        console.log("[security] tickets.updateRule atualizado (author removido)")
+        console.log("[security] tickets.updateRule atualizado")
     }
 } catch (_) {}
 
@@ -29,7 +24,6 @@ try {
     if (!hasSpaces) {
         console.log("[setup] Criando collections do feed...")
         try {
-            extendUsers()
             const spacesId = createSpaces()
             const postsId  = createPosts(spacesId)
             createReactions(postsId)
@@ -105,23 +99,39 @@ try {
         } catch (err) { console.error("[setup] Erro módulos:", err) }
     }
 
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PATCH HELPERS (run every startup)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Combines security rule fix + field extension into ONE saveCollection call
+// to avoid UNIQUE constraint collision on _migrations.file when called multiple times.
+function patchUsersCollection() {
+    try {
+        const users = $app.dao().findCollectionByNameOrId("users")
+        const existing = users.schema.fields().map((f) => f.name)
+        const extras = [
+            { name: "department", type: "text" },
+            { name: "role",  type: "select", options: { maxSelect: 1, values: ["admin","user","rh","ti"] } },
+            { name: "bio",   type: "text" },
+            { name: "phone", type: "text" },
+            { name: "birthday", type: "date" },
+        ]
+        let changed = false
+        extras.forEach(function(f) { if (!existing.includes(f.name)) { users.schema.addField(new SchemaField(f)); changed = true } })
+        const desiredRule = "@request.auth.id = id"
+        if (users.updateRule !== desiredRule) { users.updateRule = desiredRule; changed = true }
+        if (changed) {
+            $app.dao().saveCollection(users)
+            console.log("[security] users patched (fields/rule)")
+        }
+    } catch (err) { console.error("[security] Erro ao corrigir users:", err) }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // GRUPO 1 — FEED
 // ═══════════════════════════════════════════════════════════════════════════════
-function extendUsers() {
-    const users = $app.dao().findCollectionByNameOrId("users")
-    const existing = users.schema.fields().map((f) => f.name)
-    const extras = [
-        { name: "department", type: "text" },
-        { name: "role",  type: "select", options: { maxSelect: 1, values: ["admin","user","rh","ti"] } },
-        { name: "bio",   type: "text" },
-        { name: "phone", type: "text" },
-        { name: "birthday", type: "date" },
-    ]
-    extras.forEach((f) => { if (!existing.includes(f.name)) users.schema.addField(new SchemaField(f)) })
-    users.updateRule = "@request.auth.id = id"
-    $app.dao().saveCollection(users)
-}
 function createSpaces() {
     const col = new Collection()
     col.name = "spaces"; col.type = "base"
