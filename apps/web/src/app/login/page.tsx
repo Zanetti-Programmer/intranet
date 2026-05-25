@@ -1,5 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
+export const dynamic = "force-dynamic";
+
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -10,7 +12,7 @@ import { Building2, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import getPocketBase from "@/lib/pocketbase";
 
-export default function LoginPage() {
+function LoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login, loading } = useAuth();
@@ -20,7 +22,6 @@ export default function LoginPage() {
 
   const nextPath = searchParams.get("next") ?? "/";
 
-  // Se já está autenticado, redireciona direto
   useEffect(() => {
     if (getPocketBase().authStore.isValid) {
       router.replace(nextPath);
@@ -115,5 +116,17 @@ export default function LoginPage() {
         </p>
       </motion.div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <LoginInner />
+    </Suspense>
   );
 }
