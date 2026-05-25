@@ -72,7 +72,7 @@ export default function RelatoriosPage() {
         await Promise.all([
           pb.collection("users").getFullList({ fields: "id" }),
           pb.collection("posts").getFullList({ filter: `created >= "${weekAgo}"`, fields: "id" }),
-          pb.collection("tickets").getFullList({ filter: 'status != "resolvido"', fields: "id" }),
+          pb.collection("tickets").getFullList({ filter: 'status = "aberto" || status = "em_andamento"', fields: "id" }),
           pb.collection("achievements").getFullList({ fields: "id" }),
           pb.collection("tickets").getFullList({ fields: "id,category" }),
           pb.collection("posts").getFullList({ fields: "id,author", expand: "author" }),

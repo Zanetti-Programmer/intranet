@@ -15,15 +15,20 @@ const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","A
 
 function parseBirthday(birthday: string): { month: number; day: number } | null {
   if (!birthday) return null;
-  const d = new Date(birthday);
-  if (isNaN(d.getTime())) return null;
-  return { month: d.getUTCMonth(), day: d.getUTCDate() };
+  // "YYYY-MM-DD" → split para evitar deslocamento de timezone
+  const parts = birthday.split("T")[0].split("-");
+  if (parts.length < 3) return null;
+  const month = parseInt(parts[1], 10) - 1; // 0-indexed
+  const day = parseInt(parts[2], 10);
+  if (isNaN(month) || isNaN(day)) return null;
+  return { month, day };
 }
 
 function daysUntilBirthday(birthday: string): number {
   const parsed = parseBirthday(birthday);
   if (!parsed) return 9999;
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const next = new Date(today.getFullYear(), parsed.month, parsed.day);
   if (next < today) next.setFullYear(today.getFullYear() + 1);
   return Math.floor((next.getTime() - today.getTime()) / 86400000);

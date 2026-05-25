@@ -97,7 +97,7 @@ function ApplicantsPanel({ jobId, onClose }: { jobId: string; onClose: () => voi
 // ── Job Card ─────────────────────────────────────────────────────────────────
 function JobCard({ job, index, canManage, hasApplied, onApply, onToggle, onViewApplicants }: {
   job: JobPosting; index: number; canManage: boolean; hasApplied: boolean;
-  onApply: (id: string) => void; onToggle: (id: string, s: string) => void;
+  onApply: (id: string, message: string) => void; onToggle: (id: string, s: string) => void;
   onViewApplicants: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -159,7 +159,7 @@ function JobCard({ job, index, canManage, hasApplied, onApply, onToggle, onViewA
                 placeholder="Mensagem de apresentação (opcional)..." className="text-xs resize-none" rows={2} />
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setApplying(false)} className="h-8 text-xs">Cancelar</Button>
-                <Button size="sm" onClick={() => onApply(job.id)} className="h-8 text-xs gap-1">
+                <Button size="sm" onClick={() => onApply(job.id, message)} className="h-8 text-xs gap-1">
                   <Send style={{ width: 12, height: 12 }} /> Enviar candidatura
                 </Button>
               </div>
@@ -244,8 +244,8 @@ export default function VagasPage() {
       (!search.trim() || j.title.toLowerCase().includes(search.toLowerCase()) || j.department?.toLowerCase().includes(search.toLowerCase())))
   , [jobs, filter, search]);
 
-  async function handleApply(jobId: string) {
-    try { await applyToJob(jobId, ""); toast.success("Candidatura enviada!"); }
+  async function handleApply(jobId: string, message: string) {
+    try { await applyToJob(jobId, message); toast.success("Candidatura enviada!"); }
     catch { toast.error("Erro ao enviar candidatura."); }
   }
 

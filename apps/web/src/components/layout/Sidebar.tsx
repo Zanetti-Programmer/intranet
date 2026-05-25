@@ -19,6 +19,7 @@ type NavItem = {
   icon: React.ElementType;
   label: string;
   adminOnly?: boolean;
+  adminOrRhOnly?: boolean;
 };
 
 type NavSection = {
@@ -84,7 +85,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { href: "/chamados",   icon: LifeBuoy,    label: "Chamados" },
       { href: "/admin",      icon: ShieldCheck, label: "Admin",      adminOnly: true },
-      { href: "/relatorios", icon: PieChart,    label: "Relatórios", adminOnly: true },
+      { href: "/relatorios", icon: PieChart,    label: "Relatórios", adminOrRhOnly: true },
     ],
   },
 ];
@@ -96,6 +97,7 @@ export function Sidebar() {
 
   const myRole = (getPocketBase().authStore.record as { role?: string })?.role;
   const isAdmin = myRole === "admin";
+  const isAdminOrRh = myRole === "admin" || myRole === "rh";
 
   useEffect(() => {
     if (localStorage.getItem("sidebar-pinned") === "true") setPinned(true);
@@ -166,8 +168,9 @@ export function Sidebar() {
                 {section.label}
               </p>
             )}
-            {section.items.map(({ href, icon: Icon, label, adminOnly }) => {
+            {section.items.map(({ href, icon: Icon, label, adminOnly, adminOrRhOnly }) => {
               if (adminOnly && !isAdmin) return null;
+              if (adminOrRhOnly && !isAdminOrRh) return null;
               const active = isActive(href);
               return (
                 <Link

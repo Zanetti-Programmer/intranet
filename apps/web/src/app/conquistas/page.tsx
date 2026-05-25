@@ -1,7 +1,7 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { DashboardLayout } from "../layout-dashboard";
@@ -19,13 +19,12 @@ export default function ConquistasPage() {
   const myRole = (getPocketBase().authStore.record as { role?: string })?.role;
   const canCreate = myRole === "admin" || myRole === "rh";
 
-  // Fetch all users for the modal
   const [users, setUsers] = useState<import("@/types").User[]>([]);
-  useState(() => {
+  useEffect(() => {
     getPocketBase().collection("users").getFullList({ sort: "name" })
       .then((r) => setUsers(r as unknown as import("@/types").User[]))
       .catch(() => {});
-  });
+  }, []);
 
   return (
     <DashboardLayout pathname={pathname}>
