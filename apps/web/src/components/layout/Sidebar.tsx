@@ -94,8 +94,12 @@ export function Sidebar() {
   const pathname = usePathname();
   const [pinned, setPinned] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [myRole, setMyRole] = useState<string | undefined>(undefined);
 
-  const myRole = (getPocketBase().authStore.record as { role?: string })?.role;
+  useEffect(() => {
+    setMyRole((getPocketBase().authStore.record as { role?: string })?.role);
+  }, []);
+
   const isAdmin = myRole === "admin";
   const isAdminOrRh = myRole === "admin" || myRole === "rh";
 
@@ -130,7 +134,7 @@ export function Sidebar() {
       <div className="flex items-center h-[56px] border-b border-sidebar-border shrink-0 px-2 gap-2">
         {expanded ? (
           <>
-            <Link href="/" className="w-[32px] h-[32px] rounded-xl bg-primary flex items-center justify-center shrink-0 hover:opacity-90 transition-opacity">
+            <Link href="/" prefetch={false} className="w-[32px] h-[32px] rounded-xl bg-primary flex items-center justify-center shrink-0 hover:opacity-90 transition-opacity">
               <Home className="text-primary-foreground" style={{ width: 15, height: 15 }} />
             </Link>
             <span className="font-semibold text-sm text-sidebar-foreground/80 truncate flex-1">Intranet</span>
@@ -176,6 +180,7 @@ export function Sidebar() {
                 <Link
                   key={href}
                   href={href}
+                  prefetch={false}
                   title={!expanded ? label : undefined}
                   className="relative flex items-center py-[2px] px-2 group"
                 >

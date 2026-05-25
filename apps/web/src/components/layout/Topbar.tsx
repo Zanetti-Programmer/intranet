@@ -86,7 +86,7 @@ export function Topbar({ title: _title }: { title?: string }) {
         </button>
 
         {/* Chat icon — igual Alliance */}
-        <Link href="/chat"
+        <Link href="/chat" prefetch={false}
           className="w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
           <MessageCircle className="w-[18px] h-[18px]" strokeWidth={1.8} />
         </Link>
@@ -114,7 +114,7 @@ export function Topbar({ title: _title }: { title?: string }) {
                 {notifications.length === 0 ? (
                   <p className="text-xs text-muted-foreground text-center py-6">Sem notificações</p>
                 ) : notifications.map((n) => (
-                  <Link key={n.id} href={n.link ?? "#"} onClick={() => setNotifOpen(false)}
+                  <Link key={n.id} href={n.link ?? "#"} prefetch={false} onClick={() => setNotifOpen(false)}
                     className="flex gap-3 px-4 py-3 hover:bg-muted transition-colors border-b border-border/50 last:border-0">
                     <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-xs shrink-0">
                       {({ achievement:"🏆", ticket_created:"🎫", task_assigned:"✅", announcement:"📢" } as Record<string,string>)[n.type] ?? "🔔"}
