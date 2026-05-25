@@ -127,7 +127,7 @@ export default function LinksPage() {
   const [search, setSearch] = useState("");
 
   const myRole = (getPocketBase().authStore.record as { role?: string })?.role;
-  const canManage = myRole === "admin";
+  const canManage = myRole === "admin" || myRole === "rh";
 
   const filtered = useMemo(() =>
     links.filter((l) => !search.trim() ||

@@ -54,14 +54,26 @@ export function useAnnouncements() {
     pinned: boolean;
   }) => {
     const pb = getPocketBase();
+    const myId = pb.authStore.record!.id;
     await pb.collection("announcements").create({
       title: data.title,
       content: data.body,
       category: data.category,
       priority: data.priority,
       pinned: data.pinned,
-      author: pb.authStore.record!.id,
+      author: myId,
     });
+    // Notify all users (fire-and-forget)
+    pb.collection("users").getFullList({ fields: "id" })
+      .then((allUsers) => Promise.all(
+        allUsers.filter((u) => u.id !== myId).map((u) =>
+          pb.collection("notifications").create({
+            user: u.id, type: "announcement",
+            content: `Novo aviso: "${data.title}"`,
+            read: false, link: "/avisos",
+          }).catch(() => {})
+        )
+      )).catch(() => {});
   }, []);
 
   return { announcements, loading, createAnnouncement };

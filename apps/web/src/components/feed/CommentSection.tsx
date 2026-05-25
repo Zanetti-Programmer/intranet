@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
-export function CommentSection({ postId, open }: { postId: string; open: boolean }) {
+export function CommentSection({ postId, open, onCommentAdded }: { postId: string; open: boolean; onCommentAdded?: () => void }) {
   const { comments, loading, addComment } = useComments(postId, open);
   const { user } = useAuth();
   const [text, setText] = useState("");
@@ -21,6 +21,7 @@ export function CommentSection({ postId, open }: { postId: string; open: boolean
     try {
       await addComment(text.trim());
       setText("");
+      onCommentAdded?.();
     } finally {
       setSending(false);
     }

@@ -137,7 +137,7 @@ export default function TreinamentosPage() {
   const [catFilter, setCatFilter] = useState("all");
 
   const myRole = (getPocketBase().authStore.record as { role?: string })?.role;
-  const canCreate = myRole === "admin" || myRole === "rh" || myRole === "ti";
+  const canCreate = myRole === "admin" || myRole === "rh";
 
   const filtered = useMemo(() =>
     catFilter === "all" ? trainings : trainings.filter((t) => t.category === catFilter),

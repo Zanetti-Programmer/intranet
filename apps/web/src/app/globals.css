@@ -121,3 +121,26 @@
     @apply bg-border rounded-full;
   }
 }
+
+/* Rich Text Editor / Content styles */
+.rte-content p { margin-bottom: 0.5em; }
+.rte-content p:last-child { margin-bottom: 0; }
+.rte-content strong, .rte-content b { font-weight: 600; }
+.rte-content em, .rte-content i { font-style: italic; }
+.rte-content u { text-decoration: underline; }
+.rte-content s { text-decoration: line-through; }
+.rte-content ul { list-style: disc; padding-left: 1.25em; margin-bottom: 0.5em; }
+.rte-content ol { list-style: decimal; padding-left: 1.25em; margin-bottom: 0.5em; }
+.rte-content li { margin-bottom: 0.15em; }
+.rte-content h2 { font-size: 1.1em; font-weight: 700; margin-bottom: 0.4em; }
+.rte-content h3 { font-size: 1em; font-weight: 600; margin-bottom: 0.3em; }
+.rte-content blockquote { border-left: 3px solid oklch(var(--border)); padding-left: 0.75em; opacity: 0.7; }
+.rte-content a { color: oklch(var(--primary)); text-decoration: underline; }
+.rte-content hr { border-color: oklch(var(--border)); margin: 0.75em 0; }
+.rte-content .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: oklch(var(--muted-foreground) / 50%);
+  pointer-events: none;
+  height: 0;
+}

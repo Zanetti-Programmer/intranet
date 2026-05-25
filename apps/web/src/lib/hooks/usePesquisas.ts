@@ -38,8 +38,8 @@ export function usePolls() {
   useEffect(() => {
     fetchAll();
     const pb = getPocketBase();
-    pb.collection("polls").subscribe("*", () => fetchAll()).catch(() => {});
-    pb.collection("poll_votes").subscribe("*", () => fetchAll()).catch(() => {});
+    pb.collection("polls").subscribe("*", () => fetchAll()).catch((e) => console.error("[realtime]", e));
+    pb.collection("poll_votes").subscribe("*", () => fetchAll()).catch((e) => console.error("[realtime]", e));
     return () => {
       pb.collection("polls").unsubscribe("*").catch(() => {});
       pb.collection("poll_votes").unsubscribe("*").catch(() => {});

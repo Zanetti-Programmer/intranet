@@ -28,7 +28,7 @@ export function useArticles(type: "news" | "blog") {
   useEffect(() => {
     fetchAll();
     const pb = getPocketBase();
-    pb.collection("articles").subscribe("*", () => fetchAll()).catch(() => {});
+    pb.collection("articles").subscribe("*", () => fetchAll()).catch((e) => console.error("[realtime]", e));
     return () => { pb.collection("articles").unsubscribe("*").catch(() => {}); };
   }, [fetchAll]);
 

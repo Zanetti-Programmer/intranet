@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import type { Post, Space } from "@/types";
 import { UserAvatar } from "@/components/shared/UserAvatar";
@@ -8,6 +8,8 @@ import { SpaceBadge } from "./SpaceBadge";
 import { formatDistanceToNow, pbFileUrl } from "@/lib/utils";
 import { Heart, MessageCircle, Star, Trash2, Share2 } from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { useReactions } from "@/lib/hooks/usePosts";
+import getPocketBase from "@/lib/pocketbase";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
@@ -20,19 +22,31 @@ interface Props {
 export function PostCard({ post, space, onDelete }: Props) {
   const { user } = useAuth();
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [liked,   setLiked]   = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
+  const [commentCount, setCommentCount] = useState(0);
   const [starred, setStarred] = useState(false);
+  const { reactions, toggle } = useReactions(post.id);
+  const myId = getPocketBase().authStore.record?.id ?? "";
   const author   = post.expand?.author;
   const canDelete = user?.id === post.author || user?.role === "admin";
+
+  const liked     = reactions.some((r) => r.user === myId && r.emoji === "❤️");
+  const likeCount = reactions.filter((r) => r.emoji === "❤️").length;
 
   const images = (post.attachments ?? []).filter((f) =>
     /\.(jpg|jpeg|png|gif|webp)$/i.test(f)
   );
 
+  // Fetch comment count once on mount
+  useEffect(() => {
+    const pb = getPocketBase();
+    if (!pb.authStore.isValid) return;
+    pb.collection("post_comments").getList(1, 1, { filter: `post = "${post.id}"` })
+      .then((r) => setCommentCount(r.totalItems))
+      .catch(() => {});
+  }, [post.id]);
+
   function handleLike() {
-    setLiked((v) => !v);
-    setLikeCount((c) => liked ? c - 1 : c + 1);
+    void toggle("❤️");
   }
 
   return (
@@ -61,7 +75,7 @@ export function PostCard({ post, space, onDelete }: Props) {
       </div>
 
       {/* Like count (above separator, igual Alliance) */}
-      {liked && likeCount > 0 && (
+      {likeCount > 0 && (
         <div className="flex items-center gap-1 px-5 pt-3">
           <Heart className="w-3.5 h-3.5 fill-red-500 text-red-500" />
           <span className="text-xs text-muted-foreground">{likeCount}</span>
@@ -103,9 +117,10 @@ export function PostCard({ post, space, onDelete }: Props) {
 
         <button onClick={() => setCommentsOpen((v) => !v)}
           className={cn("flex items-center gap-1.5 text-[12px] transition-colors",
-            commentsOpen ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
+            commentsOpen ? "text-primary" : "text-muted-foreground hover:text-foreground")}
+          aria-label="Comentários">
           <MessageCircle className="w-3.5 h-3.5" strokeWidth={1.8} />
-          <span>Comment 0</span>
+          <span>Comentários{commentCount > 0 ? ` ${commentCount}` : ""}</span>
         </button>
 
         <button onClick={() => setStarred((v) => !v)}
@@ -132,7 +147,8 @@ export function PostCard({ post, space, onDelete }: Props) {
       {/* Comments */}
       {commentsOpen && (
         <div className="px-5 pb-4 border-t border-border/40">
-          <CommentSection postId={post.id} open={commentsOpen} />
+          <CommentSection postId={post.id} open={commentsOpen}
+            onCommentAdded={() => setCommentCount((c) => c + 1)} />
         </div>
       )}
     </motion.article>

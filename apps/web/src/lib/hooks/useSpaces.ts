@@ -19,7 +19,7 @@ export function useSpaces() {
   useEffect(() => {
     fetchAll();
     const pb = getPocketBase();
-    pb.collection("spaces").subscribe("*", () => fetchAll()).catch(() => {});
+    pb.collection("spaces").subscribe("*", () => fetchAll()).catch((e) => console.error("[realtime]", e));
     return () => { pb.collection("spaces").unsubscribe("*").catch(() => {}); };
   }, [fetchAll]);
 

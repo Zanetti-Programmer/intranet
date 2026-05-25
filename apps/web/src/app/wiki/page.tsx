@@ -9,8 +9,9 @@ import { useWiki } from "@/lib/hooks/useWiki";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
+import { RichTextContent } from "@/components/ui/RichTextContent";
 import {
   Plus, Loader2, Search, BookMarked, X, Pencil, Trash2, ChevronDown, ChevronUp,
 } from "lucide-react";
@@ -72,7 +73,7 @@ function ArticleCard({ article, canManage, onEdit, onDelete, index }: {
       </div>
 
       {!expanded && (
-        <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">{article.content}</p>
+        <RichTextContent html={article.content} className="line-clamp-2 text-muted-foreground" />
       )}
 
       <button onClick={() => setExpanded(!expanded)} className="text-xs text-primary hover:underline flex items-center gap-1">
@@ -80,8 +81,8 @@ function ArticleCard({ article, canManage, onEdit, onDelete, index }: {
       </button>
 
       {expanded && (
-        <div className="bg-muted/30 rounded-xl p-4 text-sm text-foreground/80 whitespace-pre-line leading-relaxed border border-border/50">
-          {article.content}
+        <div className="bg-muted/30 rounded-xl p-4 border border-border/50">
+          <RichTextContent html={article.content} />
         </div>
       )}
 
@@ -132,9 +133,9 @@ function ArticleModal({ article, onSubmit, onClose }: {
           <div><Label className="text-xs">Tags (vírgula)</Label><Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="ex: senha, acesso" className="mt-1 h-9" /></div>
         </div>
         <div><Label className="text-xs">Conteúdo *</Label>
-          <Textarea value={content} onChange={(e) => setContent(e.target.value)}
-            placeholder="Escreva o artigo aqui. Use Enter para parágrafos."
-            className="mt-1 resize-none min-h-[200px]" rows={8} />
+          <RichTextEditor value={content} onChange={setContent}
+            placeholder="Escreva o artigo aqui..."
+            className="mt-1" minHeight={200} />
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={onClose} className="flex-1 h-9">Cancelar</Button>
@@ -156,7 +157,7 @@ export default function WikiPage() {
   const [search, setSearch] = useState("");
 
   const myRole = (getPocketBase().authStore.record as { role?: string })?.role;
-  const canManage = myRole === "admin" || myRole === "rh" || myRole === "ti";
+  const canManage = myRole === "admin" || myRole === "rh";
 
   const filtered = useMemo(() =>
     articles.filter((a) => (filter === "Todos" || a.category === filter) &&

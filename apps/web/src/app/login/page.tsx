@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -12,23 +12,26 @@ import getPocketBase from "@/lib/pocketbase";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  const nextPath = searchParams.get("next") ?? "/";
+
   // Se já está autenticado, redireciona direto
   useEffect(() => {
     if (getPocketBase().authStore.isValid) {
-      router.replace("/");
+      router.replace(nextPath);
     }
-  }, [router]);
+  }, [router, nextPath]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
       await login(email, password);
-      router.replace("/");
+      router.replace(nextPath);
     } catch {
       toast.error("E-mail ou senha incorretos");
     }

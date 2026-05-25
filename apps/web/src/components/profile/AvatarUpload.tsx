@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { Camera } from "lucide-react";
-import { cn, getPBBaseUrl } from "@/lib/utils";
+import { cn, getPBBaseUrl, compressImage } from "@/lib/utils";
 import type { User } from "@/types";
 
 function initials(name?: string) {
@@ -31,11 +31,12 @@ export function AvatarUpload({ user, onFileSelect }: Props) {
     ? `${getPBBaseUrl()}/api/files/users/${user.id}/${user.avatar}?thumb=200x200`
     : null;
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPreview(URL.createObjectURL(file));
-    onFileSelect(file);
+    const compressed = await compressImage(file, 2);
+    setPreview(URL.createObjectURL(compressed));
+    onFileSelect(compressed);
   }
 
   const src = preview ?? currentUrl;

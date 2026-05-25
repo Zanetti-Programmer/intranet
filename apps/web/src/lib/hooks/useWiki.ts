@@ -25,7 +25,7 @@ export function useWiki() {
   useEffect(() => {
     fetchAll();
     const pb = getPocketBase();
-    pb.collection("wiki_articles").subscribe("*", () => fetchAll()).catch(() => {});
+    pb.collection("wiki_articles").subscribe("*", () => fetchAll()).catch((e) => console.error("[realtime]", e));
     return () => { pb.collection("wiki_articles").unsubscribe("*").catch(() => {}); };
   }, [fetchAll]);
 

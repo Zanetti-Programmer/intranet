@@ -28,9 +28,9 @@ function PollCard({ poll, voteCounts, voted, votedIdx, totalVotes, onVote, onClo
   totalVotes: number; onVote: (pollId: string, idx: number) => void;
   onClose: (id: string) => void; canManage: boolean; index: number;
 }) {
-  const showResults = voted || poll.status === "encerrada";
-  const author = poll.expand?.author;
   const isExpired = poll.deadline ? new Date(poll.deadline) < new Date() : false;
+  const showResults = voted || poll.status === "encerrada" || isExpired;
+  const author = poll.expand?.author;
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}

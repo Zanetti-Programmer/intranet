@@ -40,6 +40,15 @@ export function useTickets(statusFilter?: string) {
     const ticket = await pb.collection("tickets").create({
       ...data, status: "aberto", author: pb.authStore.record!.id,
     });
+    // Notify TI team
+    pb.collection("users").getFullList({ filter: 'role = "ti"', fields: "id" })
+      .then((tiUsers) => Promise.all(tiUsers.map((u) =>
+        pb.collection("notifications").create({
+          user: u.id, type: "ticket_created",
+          content: `Novo chamado: "${data.title}"`,
+          read: false, link: `/chamados/${ticket.id}`,
+        }).catch(() => {})
+      ))).catch(() => {});
     await fetch();
     return ticket.id;
   }, [fetch]);

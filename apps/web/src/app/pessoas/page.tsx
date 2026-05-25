@@ -1,7 +1,7 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "../layout-dashboard";
@@ -26,18 +26,34 @@ export default function PessoasPage() {
   const { createDM } = useChannels();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("Todos");
   const myId = getPocketBase().authStore.record?.id;
+  const pageRef = useRef(1);
+  const PAGE_SIZE = 100;
 
-  useEffect(() => {
+  const loadPage = useCallback(async (page: number) => {
     const pb = getPocketBase();
     if (!pb.authStore.isValid) return;
-    pb.collection("users").getFullList({ sort: "name" })
-      .then((r) => setUsers(r as unknown as User[]))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    setLoading(true);
+    try {
+      const result = await pb.collection("users").getList(page, PAGE_SIZE, { sort: "name" });
+      if (page === 1) {
+        setUsers(result.items as unknown as User[]);
+      } else {
+        setUsers((prev) => [...prev, ...result.items as unknown as User[]]);
+      }
+      setHasMore(result.totalPages > page);
+      pageRef.current = page;
+    } catch {
+      if (page === 1) setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [PAGE_SIZE]);
+
+  useEffect(() => { loadPage(1); }, [loadPage]);
 
   const departments = ["Todos", ...Array.from(new Set(users.map((u) => u.department).filter(Boolean) as string[]))];
 
@@ -59,7 +75,7 @@ export default function PessoasPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold">Pessoas</h1>
-            <p className="text-sm text-muted-foreground">{users.length} colaboradores</p>
+            <p className="text-sm text-muted-foreground">{users.length}{hasMore ? "+" : ""} colaboradores</p>
           </div>
         </div>
 
@@ -87,31 +103,41 @@ export default function PessoasPage() {
             <p className="font-medium">Nenhuma pessoa encontrada</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {filtered.map((user, i) => {
-              const role = ROLE_BADGE[user.role] ?? ROLE_BADGE.user;
-              return (
-                <motion.div key={user.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-                  className="bg-card border border-border rounded-xl p-4 flex flex-col items-center text-center gap-3 hover:border-primary/30 transition-colors group">
-                  <UserAvatar user={user} size="lg" />
-                  <div className="w-full">
-                    <p className="font-semibold text-sm truncate">{user.name}</p>
-                    {user.department && <p className="text-xs text-muted-foreground truncate mt-0.5">{user.department}</p>}
-                    <span className={cn("inline-block mt-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium", role.class)}>
-                      {role.label}
-                    </span>
-                  </div>
-                  {user.bio && <p className="text-[11px] text-muted-foreground line-clamp-2 w-full">{user.bio}</p>}
-                  {user.id !== myId && (
-                    <button onClick={() => void handleDM(user.id)}
-                      className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-all py-1 rounded-lg hover:bg-primary/10">
-                      <MessageSquare className="w-3.5 h-3.5" /> Conversar
-                    </button>
-                  )}
-                </motion.div>
-              );
-            })}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {filtered.map((user, i) => {
+                const role = ROLE_BADGE[user.role] ?? ROLE_BADGE.user;
+                return (
+                  <motion.div key={user.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                    className="bg-card border border-border rounded-xl p-4 flex flex-col items-center text-center gap-3 hover:border-primary/30 transition-colors group">
+                    <UserAvatar user={user} size="lg" />
+                    <div className="w-full">
+                      <p className="font-semibold text-sm truncate">{user.name}</p>
+                      {user.department && <p className="text-xs text-muted-foreground truncate mt-0.5">{user.department}</p>}
+                      <span className={cn("inline-block mt-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium", role.class)}>
+                        {role.label}
+                      </span>
+                    </div>
+                    {user.bio && <p className="text-[11px] text-muted-foreground line-clamp-2 w-full">{user.bio}</p>}
+                    {user.id !== myId && (
+                      <button onClick={() => void handleDM(user.id)}
+                        className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-all py-1 rounded-lg hover:bg-primary/10">
+                        <MessageSquare className="w-3.5 h-3.5" /> Conversar
+                      </button>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+            {hasMore && !search.trim() && deptFilter === "Todos" && (
+              <div className="flex justify-center pt-4">
+                <button onClick={() => loadPage(pageRef.current + 1)} disabled={loading}
+                  className="px-4 py-2 text-sm font-medium rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50">
+                  {loading ? "Carregando..." : "Carregar mais"}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </DashboardLayout>

@@ -23,7 +23,7 @@ export function useLinks() {
   useEffect(() => {
     fetchAll();
     const pb = getPocketBase();
-    pb.collection("useful_links").subscribe("*", () => fetchAll()).catch(() => {});
+    pb.collection("useful_links").subscribe("*", () => fetchAll()).catch((e) => console.error("[realtime]", e));
     return () => { pb.collection("useful_links").unsubscribe("*").catch(() => {}); };
   }, [fetchAll]);
 

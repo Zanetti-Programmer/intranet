@@ -85,7 +85,15 @@ export function UploadDocumentModal({ onSubmit, onClose }: Props) {
             </div>
             <input ref={inputRef} type="file" className="hidden"
               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                if (f && f.size > 20 * 1024 * 1024) {
+                  alert("Arquivo muito grande. Tamanho máximo: 20MB.");
+                  e.target.value = "";
+                  return;
+                }
+                setFile(f);
+              }} />
           </div>
         </div>
 

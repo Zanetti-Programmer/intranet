@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { DashboardLayout } from "../layout-dashboard";
 import { UserAvatar } from "@/components/shared/UserAvatar";
-import { Loader2, BarChart2, Users, FileText, Ticket, Trophy, MessageSquare } from "lucide-react";
+import { Loader2, BarChart2, Users, Ticket, Trophy, MessageSquare, Download } from "lucide-react";
 import getPocketBase from "@/lib/pocketbase";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types";
@@ -45,6 +45,30 @@ function StatCard({ icon, label, value, sub }: {
       </div>
     </div>
   );
+}
+
+function exportCSV(stats: Stats) {
+  const rows: (string | number)[][] = [
+    ["Métrica", "Valor"],
+    ["Usuários totais", stats.users],
+    ["Posts esta semana", stats.postsWeek],
+    ["Chamados abertos", stats.openTickets],
+    ["Conquistas totais", stats.achievements],
+    [],
+    ["Chamados por categoria", "Quantidade"],
+    ...stats.ticketsByCategory.map((c) => [c.category || "Outros", c.count]),
+    [],
+    ["Top colaboradores", "Posts"],
+    ...stats.topUsers.map((u) => [u.user.name, u.count]),
+  ];
+  const csv = rows.map((r) => r.join(",")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `relatorio-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function RelatoriosPage() {
@@ -127,16 +151,24 @@ export default function RelatoriosPage() {
     finally { setLoading(false); }
   }
 
-  if (myRole !== "admin" && myRole !== "rh") return null;
+  if (!myRole || (myRole !== "admin" && myRole !== "rh")) return null;
 
   return (
     <DashboardLayout pathname={pathname}>
       <div className="max-w-5xl mx-auto px-5 py-6 space-y-6">
-        <div>
-          <h1 className="text-xl font-semibold flex items-center gap-2">
-            <BarChart2 className="w-5 h-5 text-primary" />Relatórios
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Visão geral da atividade na intranet</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-xl font-semibold flex items-center gap-2">
+              <BarChart2 className="w-5 h-5 text-primary" />Relatórios
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Visão geral da atividade na intranet</p>
+          </div>
+          {stats && (
+            <button onClick={() => exportCSV(stats)}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors">
+              <Download style={{ width: 13, height: 13 }} /> Exportar CSV
+            </button>
+          )}
         </div>
 
         {loading ? (

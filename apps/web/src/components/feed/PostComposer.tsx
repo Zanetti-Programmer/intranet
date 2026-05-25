@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import type { Space } from "@/types";
 import { Image as ImageIcon, X, Loader2, ChevronDown } from "lucide-react";
 import NextImage from "next/image";
-import { cn } from "@/lib/utils";
+import { cn, compressImage } from "@/lib/utils";
 
 interface Props {
   spaces: Space[];
@@ -28,11 +28,12 @@ export function PostComposer({ spaces, onSubmit, defaultSpaceId }: Props) {
 
   const selectedSpace = spaces.find((s) => s.id === spaceId);
 
-  function handleFiles(picked: FileList | null) {
+  async function handleFiles(picked: FileList | null) {
     if (!picked) return;
     const arr = Array.from(picked).slice(0, 4);
-    setFiles((prev) => [...prev, ...arr].slice(0, 4));
-    arr.forEach((f) => {
+    const compressed = await Promise.all(arr.map((f) => compressImage(f, 20)));
+    setFiles((prev) => [...prev, ...compressed].slice(0, 4));
+    compressed.forEach((f) => {
       const reader = new FileReader();
       reader.onload = (e) => setPreviews((prev) => [...prev, e.target!.result as string].slice(0, 4));
       reader.readAsDataURL(f);

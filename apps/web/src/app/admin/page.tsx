@@ -29,8 +29,8 @@ export default function AdminPage() {
   const myRole = (pb.authStore.record as { role?: string })?.role;
 
   useEffect(() => {
-    if (myRole && myRole !== "admin") router.replace("/");
-  }, [myRole, router]);
+    if (pb.authStore.isValid && myRole && myRole !== "admin") router.replace("/");
+  }, [myRole, router, pb]);
 
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +79,7 @@ export default function AdminPage() {
     }
   }
 
-  if (myRole && myRole !== "admin") return null;
+  if (!myRole || myRole !== "admin") return null;
 
   const filtered = users.filter((u) => {
     if (!search.trim()) return true;

@@ -23,7 +23,7 @@ export function useBeneficios() {
   useEffect(() => {
     fetchAll();
     const pb = getPocketBase();
-    pb.collection("benefits").subscribe("*", () => fetchAll()).catch(() => {});
+    pb.collection("benefits").subscribe("*", () => fetchAll()).catch((e) => console.error("[realtime]", e));
     return () => { pb.collection("benefits").unsubscribe("*").catch(() => {}); };
   }, [fetchAll]);
 
@@ -36,10 +36,15 @@ export function useBeneficios() {
   }, []);
 
   const deleteBenefit = useCallback(async (id: string) => {
-    const pb = getPocketBase();
-    await pb.collection("benefits").delete(id);
-    setBenefits((prev) => prev.filter((b) => b.id !== id));
-  }, []);
+    const prev = benefits;
+    setBenefits((p) => p.filter((b) => b.id !== id));
+    try {
+      await getPocketBase().collection("benefits").delete(id);
+    } catch (err) {
+      setBenefits(prev);
+      throw err;
+    }
+  }, [benefits]);
 
   return { benefits, loading, createBenefit, deleteBenefit };
 }

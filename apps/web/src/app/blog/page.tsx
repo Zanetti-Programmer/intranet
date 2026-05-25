@@ -9,8 +9,9 @@ import { useArticles } from "@/lib/hooks/useArticles";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
+import { RichTextContent } from "@/components/ui/RichTextContent";
 import { Plus, Loader2, Search, BookOpen, X, ChevronDown, ChevronUp, Image as ImageIcon, Trash2, Eye } from "lucide-react";
 import getPocketBase from "@/lib/pocketbase";
 import { cn, pbFileUrl } from "@/lib/utils";
@@ -69,9 +70,7 @@ function BlogCard({ article, canManage, onDelete, onPublish, index }: {
           {article.title}
         </h3>
 
-        <p className={cn("text-sm text-muted-foreground leading-relaxed", !expanded && "line-clamp-3")}>
-          {article.content}
-        </p>
+        <RichTextContent html={article.content} className={cn(!expanded ? "line-clamp-3" : "")} />
 
         <button onClick={() => setExpanded(!expanded)} className="text-xs text-primary hover:underline flex items-center gap-1">
           {expanded ? <><ChevronUp style={{ width: 12, height: 12 }} />Recolher</> : <><ChevronDown style={{ width: 12, height: 12 }} />Ler completo</>}
@@ -116,7 +115,9 @@ function NewBlogModal({ onSubmit, onClose }: { onSubmit: (d: any) => Promise<voi
         </div>
         <div><Label className="text-xs">Título *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 h-9" autoFocus /></div>
         <div><Label className="text-xs">Conteúdo *</Label>
-          <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Compartilhe seus aprendizados..." className="mt-1 resize-none min-h-[160px]" rows={7} />
+          <RichTextEditor value={content} onChange={setContent}
+            placeholder="Compartilhe seus aprendizados..."
+            className="mt-1" minHeight={160} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div><Label className="text-xs">Tags (vírgula)</Label><Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="ex: cultura, tech" className="mt-1 h-9" /></div>

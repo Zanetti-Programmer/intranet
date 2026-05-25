@@ -1,11 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Menu, Search, MessageCircle, Bell, ChevronDown,
   LogOut, User as UserIcon, Sun, Moon, Globe,
 } from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useNotifications } from "@/lib/hooks/useAchievements";
+import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -27,7 +28,18 @@ export function Topbar({ title: _title }: { title?: string }) {
   const router = useRouter();
   const { count, notifications, markAllRead } = useNotifications();
   const [notifOpen, setNotifOpen] = useState(false);
-  const [search, setSearch]   = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    function handler(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    }
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const avatarUrl = user?.avatar
     ? `${getPBBaseUrl()}/api/files/users/${user.id}/${user.avatar}?thumb=40x40`
@@ -45,16 +57,13 @@ export function Topbar({ title: _title }: { title?: string }) {
         </button>
       </div>
 
-      {/* ── Search bar ──────────────────────── */}
-      <div className="flex items-center gap-2 flex-1 px-4 max-w-sm">
+      {/* ── Search bar (opens modal) ─────────── */}
+      <button onClick={() => setSearchOpen(true)}
+        className="flex items-center gap-2 flex-1 px-4 max-w-sm text-left hover:bg-muted/40 rounded-lg mx-1 py-1.5 transition-colors">
         <Search className="w-4 h-4 text-muted-foreground/50 shrink-0" strokeWidth={1.8} />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Start typing to search..."
-          className="flex-1 bg-transparent border-0 text-sm text-foreground placeholder:text-muted-foreground/45 focus:outline-none"
-        />
-      </div>
+        <span className="flex-1 text-sm text-muted-foreground/45">Start typing to search...</span>
+        <kbd className="hidden md:flex text-[10px] text-muted-foreground/40 bg-muted px-1.5 py-0.5 rounded border border-border/50">⌘K</kbd>
+      </button>
 
       {/* ── Right side ──────────────────────── */}
       <div className="flex items-center gap-0.5 px-3 ml-auto">
@@ -108,7 +117,7 @@ export function Topbar({ title: _title }: { title?: string }) {
                   <Link key={n.id} href={n.link ?? "#"} onClick={() => setNotifOpen(false)}
                     className="flex gap-3 px-4 py-3 hover:bg-muted transition-colors border-b border-border/50 last:border-0">
                     <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-xs shrink-0">
-                      {n.type === "achievement" ? "🏆" : "🔔"}
+                      {({ achievement:"🏆", ticket_created:"🎫", task_assigned:"✅", announcement:"📢" } as Record<string,string>)[n.type] ?? "🔔"}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs line-clamp-2">{n.content}</p>
@@ -156,6 +165,7 @@ export function Topbar({ title: _title }: { title?: string }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
     </header>
   );
 }

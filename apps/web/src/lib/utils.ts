@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import imageCompression from "browser-image-compression"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -27,4 +28,25 @@ export function getPBBaseUrl(): string {
 export function pbFileUrl(collection: string, recordId: string, filename: string, thumb?: string) {
   const url = `${getPBBaseUrl()}/api/files/${collection}/${recordId}/${filename}`;
   return thumb ? `${url}?thumb=${thumb}` : url;
+}
+
+/**
+ * Comprime uma imagem no browser antes do upload.
+ * Arquivos não-imagem são retornados sem alteração.
+ * @param file    Arquivo original
+ * @param maxMB   Tamanho máximo desejado em MB
+ */
+export async function compressImage(file: File, maxMB: number): Promise<File> {
+  if (!file.type.startsWith("image/")) return file;
+  try {
+    const compressed = await imageCompression(file, {
+      maxSizeMB: maxMB,
+      maxWidthOrHeight: 4096,
+      useWebWorker: true,
+      preserveExif: false,
+    });
+    return new File([compressed], file.name, { type: compressed.type });
+  } catch {
+    return file;
+  }
 }

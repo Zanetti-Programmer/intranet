@@ -23,7 +23,7 @@ function FeedInner() {
   const spaceFilter = searchParams?.get("space") ?? null;
 
   const { spaces } = useSpaces();
-  const { posts, loading, createPost, deletePost } = usePosts(spaceFilter);
+  const { posts, loading, hasMore, loadMore, createPost, deletePost } = usePosts(spaceFilter);
   const { announcements } = useAnnouncements();
 
   // Posts with images for "From The Blog"
@@ -100,9 +100,10 @@ function FeedInner() {
             )}
 
             {/* LOAD MORE */}
-            {posts.length > 0 && (
-              <button className="w-full py-4 rounded-2xl bg-primary text-primary-foreground text-sm font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors">
-                LOAD MORE
+            {hasMore && (
+              <button onClick={loadMore} disabled={loading}
+                className="w-full py-4 rounded-2xl bg-primary text-primary-foreground text-sm font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors disabled:opacity-60">
+                {loading ? "Carregando..." : "LOAD MORE"}
               </button>
             )}
           </div>

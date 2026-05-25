@@ -1,32 +1,43 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import getPocketBase from "@/lib/pocketbase";
 import type { Post, PostComment, PostReaction } from "@/types";
+
+const PAGE_SIZE = 20;
 
 export function usePosts(spaceFilter?: string | null) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
+  const pageRef = useRef(1);
 
-  const fetchPosts = useCallback(async () => {
+  const load = useCallback(async (page: number) => {
     const pb = getPocketBase();
     if (!pb.authStore.isValid) return;
+    setLoading(true);
     try {
       const filter = spaceFilter ? `space = "${spaceFilter}"` : "";
-      const result = await pb.collection("posts").getList(1, 50, {
+      const result = await pb.collection("posts").getList(page, PAGE_SIZE, {
         sort: "-created",
         expand: "author",
         filter,
       });
-      setPosts(result.items as unknown as Post[]);
+      if (page === 1) {
+        setPosts(result.items as unknown as Post[]);
+      } else {
+        setPosts((prev) => [...prev, ...result.items as unknown as Post[]]);
+      }
+      setHasMore(result.totalPages > page);
+      pageRef.current = page;
     } catch {
-      setPosts([]);
+      if (page === 1) setPosts([]);
     } finally {
       setLoading(false);
     }
   }, [spaceFilter]);
 
   useEffect(() => {
-    fetchPosts();
+    load(1);
     const pb = getPocketBase();
     if (!pb.authStore.isValid) return;
 
@@ -43,10 +54,10 @@ export function usePosts(spaceFilter?: string | null) {
           prev.map((p) => (p.id === e.record.id ? { ...p, ...e.record } as Post : p))
         );
       }
-    }).catch(() => {});
+    }).catch((e) => console.error("[realtime] posts:", e));
 
     return () => { pb.collection("posts").unsubscribe("*").catch(() => {}); };
-  }, [fetchPosts]);
+  }, [load]);
 
   const createPost = useCallback(
     async (content: string, spaceId?: string, files?: File[]) => {
@@ -65,7 +76,9 @@ export function usePosts(spaceFilter?: string | null) {
     await getPocketBase().collection("posts").delete(id);
   }, []);
 
-  return { posts, loading, createPost, deletePost, refetch: fetchPosts };
+  const loadMore = useCallback(() => load(pageRef.current + 1), [load]);
+
+  return { posts, loading, hasMore, loadMore, createPost, deletePost, refetch: () => load(1) };
 }
 
 // ── Reactions ─────────────────────────────────────────────────────────────────
@@ -87,7 +100,7 @@ export function useReactions(postId: string) {
       } else if (e.action === "delete") {
         setReactions((prev) => prev.filter((r) => r.id !== e.record.id));
       }
-    }).catch(() => {});
+    }).catch((e) => console.error("[realtime] post_reactions:", e));
 
     return () => { pb.collection("post_reactions").unsubscribe("*").catch(() => {}); };
   }, [postId]);

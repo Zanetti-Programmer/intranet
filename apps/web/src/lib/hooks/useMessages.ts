@@ -5,6 +5,11 @@ import type { Message, TypingStatus, User } from "@/types";
 
 const PAGE_SIZE = 50;
 
+function dedup<T extends { id: string }>(arr: T[]): T[] {
+  const seen = new Set<string>();
+  return arr.filter((item) => seen.has(item.id) ? false : (seen.add(item.id), true));
+}
+
 export function useMessages(channelId: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -14,6 +19,8 @@ export function useMessages(channelId: string | null) {
   useEffect(() => {
     if (!channelId) return;
     const pb = getPocketBase();
+    let cancelled = false;
+
     setLoading(true);
     setMessages([]);
     pageRef.current = 1;
@@ -23,18 +30,22 @@ export function useMessages(channelId: string | null) {
       sort: "created",
       expand: "author",
     }).then((result) => {
+      if (cancelled) return;
       setMessages(result.items as unknown as Message[]);
       setHasMore(result.totalItems > PAGE_SIZE);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => {}).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
 
-    // Realtime subscription
     pb.collection("messages").subscribe("*", async (e) => {
+      if (cancelled) return;
       if (e.record.channel !== channelId) return;
 
       if (e.action === "create") {
         try {
           const full = await pb.collection("messages").getOne(e.record.id, { expand: "author" });
-          setMessages((prev) => [...prev, full as unknown as Message]);
+          if (cancelled) return;
+          setMessages((prev) => dedup([...prev, full as unknown as Message]));
         } catch {}
       } else if (e.action === "delete") {
         setMessages((prev) => prev.filter((m) => m.id !== e.record.id));
@@ -43,9 +54,12 @@ export function useMessages(channelId: string | null) {
           prev.map((m) => m.id === e.record.id ? { ...m, ...e.record } as Message : m)
         );
       }
-    }).catch(() => {});
+    }).catch((e) => console.error("[realtime] messages:", e));
 
-    return () => { pb.collection("messages").unsubscribe("*").catch(() => {}); };
+    return () => {
+      cancelled = true;
+      pb.collection("messages").unsubscribe("*").catch(() => {});
+    };
   }, [channelId]);
 
   const sendMessage = useCallback(async (content: string, files?: File[]) => {
@@ -72,7 +86,7 @@ export function useMessages(channelId: string | null) {
       sort: "created",
       expand: "author",
     });
-    setMessages((prev) => [...(result.items as unknown as Message[]), ...prev]);
+    setMessages((prev) => dedup([...result.items as unknown as Message[], ...prev]));
     setHasMore(result.totalPages > pageRef.current);
   }, [channelId, hasMore]);
 
@@ -89,26 +103,29 @@ export function useTyping(channelId: string | null) {
     if (!channelId) return;
     const pb = getPocketBase();
     const myId = pb.authStore.record?.id;
+    let cancelled = false;
 
     pb.collection("typing_status").subscribe("*", async (e) => {
+      if (cancelled) return;
       if (e.record.channel !== channelId) return;
 
       if (e.action === "delete" || e.action === "create" || e.action === "update") {
-        // Re-fetch current typing users (updated in last 4s, excluding self)
         try {
           const cutoff = new Date(Date.now() - 4000).toISOString().replace("T", " ").slice(0, 19);
           const records = await pb.collection("typing_status").getFullList({
             filter: `channel = "${channelId}" && user != "${myId}" && updated >= "${cutoff}"`,
             expand: "user",
           });
-          setTypingUsers(records.map((r) => r.expand?.user).filter(Boolean) as unknown as User[]);
+          if (!cancelled) {
+            setTypingUsers(records.map((r) => r.expand?.user).filter(Boolean) as unknown as User[]);
+          }
         } catch {}
       }
-    }).catch(() => {});
+    }).catch((e) => console.error("[realtime] typing_status:", e));
 
     return () => {
+      cancelled = true;
       pb.collection("typing_status").unsubscribe("*").catch(() => {});
-      // Clean up our own typing record on unmount
       if (recordIdRef.current) {
         pb.collection("typing_status").delete(recordIdRef.current).catch(() => {});
         recordIdRef.current = null;
@@ -135,7 +152,6 @@ export function useTyping(channelId: string | null) {
       recordIdRef.current = null;
     }
 
-    // Stop typing after 3s
     timeoutRef.current = setTimeout(async () => {
       if (recordIdRef.current) {
         await getPocketBase().collection("typing_status").delete(recordIdRef.current).catch(() => {});

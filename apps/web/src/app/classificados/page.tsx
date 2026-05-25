@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "../layout-dashboard";
 import { useClassifieds } from "@/lib/hooks/useClassifieds";
 import { useChannels } from "@/lib/hooks/useChannels";
-import { pbFileUrl, formatDistanceToNow } from "@/lib/utils";
+import { pbFileUrl, formatDistanceToNow, compressImage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,11 +49,12 @@ export default function ClassificadosPage() {
   const [previews, setPreviews] = useState<string[]>([]);
   const [formLoading, setFormLoading] = useState(false);
 
-  function addPhotos(files: FileList | null) {
+  async function addPhotos(files: FileList | null) {
     if (!files) return;
     const arr = Array.from(files).slice(0, 5 - photos.length);
-    setPhotos((p) => [...p, ...arr]);
-    arr.forEach((f) => {
+    const compressed = await Promise.all(arr.map((f) => compressImage(f, 10)));
+    setPhotos((p) => [...p, ...compressed]);
+    compressed.forEach((f) => {
       const r = new FileReader();
       r.onload = (e) => setPreviews((p) => [...p, e.target!.result as string]);
       r.readAsDataURL(f);

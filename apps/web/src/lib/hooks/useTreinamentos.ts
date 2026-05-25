@@ -26,8 +26,8 @@ export function useTrainings() {
   useEffect(() => {
     fetchAll();
     const pb = getPocketBase();
-    pb.collection("trainings").subscribe("*", () => fetchAll()).catch(() => {});
-    pb.collection("training_completions").subscribe("*", () => fetchAll()).catch(() => {});
+    pb.collection("trainings").subscribe("*", () => fetchAll()).catch((e) => console.error("[realtime]", e));
+    pb.collection("training_completions").subscribe("*", () => fetchAll()).catch((e) => console.error("[realtime]", e));
     return () => {
       pb.collection("trainings").unsubscribe("*").catch(() => {});
       pb.collection("training_completions").unsubscribe("*").catch(() => {});

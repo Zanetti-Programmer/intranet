@@ -1,6 +1,7 @@
 "use client";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Download, FileText, FileSpreadsheet, Presentation } from "lucide-react";
+import { Download, Eye, EyeOff } from "lucide-react";
 import { pbFileUrl } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Document } from "@/types";
@@ -44,9 +45,16 @@ interface Props {
   index: number;
 }
 
+const IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "gif", "webp", "svg"]);
+
 export function DocumentCard({ document: doc, index }: Props) {
   const url = pbFileUrl("documents", doc.id, doc.file);
   const catCls = CATEGORY_COLORS[doc.category] ?? CATEGORY_COLORS["Outros"];
+  const ext = doc.file.split(".").pop()?.toLowerCase() ?? "";
+  const isPdf = ext === "pdf";
+  const isImage = IMAGE_EXTS.has(ext);
+  const previewable = isPdf || isImage;
+  const [preview, setPreview] = useState(false);
 
   return (
     <motion.div
@@ -65,6 +73,16 @@ export function DocumentCard({ document: doc, index }: Props) {
         </div>
       </div>
 
+      {preview && isPdf && (
+        <iframe src={url} title={doc.title}
+          className="w-full h-64 rounded-lg border border-border bg-muted" />
+      )}
+      {preview && isImage && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt={doc.title}
+          className="w-full max-h-64 object-contain rounded-lg border border-border bg-muted" />
+      )}
+
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full", catCls)}>
@@ -72,15 +90,21 @@ export function DocumentCard({ document: doc, index }: Props) {
           </span>
           <span className="text-[11px] text-muted-foreground">{timeAgo(doc.created)}</span>
         </div>
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors shrink-0 font-medium"
-        >
-          <Download style={{ width: 13, height: 13 }} />
-          Download
-        </a>
+        <div className="flex items-center gap-2 shrink-0">
+          {previewable && (
+            <button onClick={() => setPreview((v) => !v)}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors font-medium">
+              {preview
+                ? <><EyeOff style={{ width: 13, height: 13 }} /> Fechar</>
+                : <><Eye style={{ width: 13, height: 13 }} /> Visualizar</>}
+            </button>
+          )}
+          <a href={url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors font-medium">
+            <Download style={{ width: 13, height: 13 }} />
+            Download
+          </a>
+        </div>
       </div>
     </motion.div>
   );

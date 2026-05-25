@@ -1,7 +1,29 @@
 /// <reference path="../pb_data/types.d.ts" />
 // Em PocketBase v0.22 o código no nível raiz executa automaticamente após o bootstrap
 
-// ── Grupo 1: Feed + Espaços ────────────────────────────────────────────────
+// ── Patches de segurança (executam todo startup) ───────────────────────────────
+// Garante que deployments existentes recebam as regras corretas mesmo sem reinstalação
+try {
+    const usersCol = $app.dao().findCollectionByNameOrId("users")
+    const desiredRule = "@request.auth.id = id"
+    if (usersCol.updateRule !== desiredRule) {
+        usersCol.updateRule = desiredRule
+        $app.dao().saveCollection(usersCol)
+        console.log("[security] users.updateRule atualizado")
+    }
+} catch (err) { console.error("[security] Erro ao corrigir users.updateRule:", err) }
+
+try {
+    const ticketsCol = $app.dao().findCollectionByNameOrId("tickets")
+    const desiredRule = "@request.auth.record.role = 'admin' || @request.auth.record.role = 'ti'"
+    if (ticketsCol.updateRule !== desiredRule) {
+        ticketsCol.updateRule = desiredRule
+        $app.dao().saveCollection(ticketsCol)
+        console.log("[security] tickets.updateRule atualizado (author removido)")
+    }
+} catch (_) {}
+
+// ── Grupo 1: Feed + Espaços ────────────────────────────────────────────────────
     let hasSpaces = false
     try { $app.dao().findCollectionByNameOrId("spaces"); hasSpaces = true } catch (_) {}
     if (!hasSpaces) {
@@ -61,6 +83,28 @@
         } catch (err) { console.error("[setup] Erro mídia:", err) }
     }
 
+    // ── Grupo 5: Módulos (docs, wiki, vagas, benefícios, pesquisas, tarefas, etc.) ──
+    let hasDocuments = false
+    try { $app.dao().findCollectionByNameOrId("documents"); hasDocuments = true } catch (_) {}
+    if (!hasDocuments) {
+        console.log("[setup] Criando collections de módulos...")
+        try {
+            setupDocuments()
+            setupWikiArticles()
+            setupArticles()
+            setupJobPostings()
+            setupJobApplications()
+            setupBenefits()
+            setupPolls()
+            setupPollVotes()
+            setupTasks()
+            setupTrainings()
+            setupTrainingCompletions()
+            setupUsefulLinks()
+            setupWallCards()
+        } catch (err) { console.error("[setup] Erro módulos:", err) }
+    }
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // GRUPO 1 — FEED
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -75,6 +119,7 @@ function extendUsers() {
         { name: "birthday", type: "date" },
     ]
     extras.forEach((f) => { if (!existing.includes(f.name)) users.schema.addField(new SchemaField(f)) })
+    users.updateRule = "@request.auth.id = id"
     $app.dao().saveCollection(users)
 }
 function createSpaces() {
@@ -253,7 +298,8 @@ function createTickets() {
     const col = new Collection(); col.name = "tickets"; col.type = "base"
     col.listRule = "@request.auth.id != ''"; col.viewRule = col.listRule
     col.createRule = "@request.auth.id != ''"
-    col.updateRule = "@request.auth.id = author.id || @request.auth.record.role = 'admin' || @request.auth.record.role = 'ti'"
+    // Autor pode ver mas somente admin/ti alteram status — sem author na updateRule
+    col.updateRule = "@request.auth.record.role = 'admin' || @request.auth.record.role = 'ti'"
     col.deleteRule = "@request.auth.record.role = 'admin'"
     col.schema.addField(new SchemaField({ name:"title", type:"text", required:true }))
     col.schema.addField(new SchemaField({ name:"description", type:"text", required:true }))
@@ -353,5 +399,199 @@ function createMarketplaceItems() {
     col.schema.addField(new SchemaField({ name:"status", type:"select", options:{maxSelect:1,values:["disponivel","reservado","vendido"]} }))
     col.schema.addField(new SchemaField({ name:"category", type:"text" }))
     col.schema.addField(new SchemaField({ name:"contact_dm", type:"bool" }))
+    $app.dao().saveCollection(col)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GRUPO 5 — MÓDULOS
+// ═══════════════════════════════════════════════════════════════════════════════
+function setupDocuments() {
+    const usersId = $app.dao().findCollectionByNameOrId("users").id
+    const col = new Collection(); col.name = "documents"; col.type = "base"
+    col.listRule = "@request.auth.id != ''"; col.viewRule = col.listRule
+    col.createRule = "@request.auth.record.role = 'admin' || @request.auth.record.role = 'rh'"
+    col.updateRule = col.createRule
+    col.deleteRule = "@request.auth.record.role = 'admin'"
+    col.schema.addField(new SchemaField({ name:"title", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"description", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"file", type:"file", required:true, options:{maxSelect:1} }))
+    col.schema.addField(new SchemaField({ name:"category", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"author", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
+    $app.dao().saveCollection(col)
+}
+function setupWikiArticles() {
+    const usersId = $app.dao().findCollectionByNameOrId("users").id
+    const col = new Collection(); col.name = "wiki_articles"; col.type = "base"
+    col.listRule = "@request.auth.id != ''"; col.viewRule = col.listRule
+    col.createRule = "@request.auth.record.role = 'admin' || @request.auth.record.role = 'rh'"
+    col.updateRule = "@request.auth.id = author.id || @request.auth.record.role = 'admin' || @request.auth.record.role = 'rh'"
+    col.deleteRule = "@request.auth.record.role = 'admin' || @request.auth.record.role = 'rh'"
+    col.schema.addField(new SchemaField({ name:"title", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"content", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"category", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"tags", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"author", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
+    $app.dao().saveCollection(col)
+}
+function setupArticles() {
+    const usersId = $app.dao().findCollectionByNameOrId("users").id
+    const col = new Collection(); col.name = "articles"; col.type = "base"
+    col.listRule = "@request.auth.id != ''"; col.viewRule = col.listRule
+    col.createRule = "@request.auth.record.role = 'admin' || @request.auth.record.role = 'rh'"
+    col.updateRule = "@request.auth.id = author.id || @request.auth.record.role = 'admin'"
+    col.deleteRule = "@request.auth.record.role = 'admin'"
+    col.schema.addField(new SchemaField({ name:"title", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"content", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"cover", type:"file", options:{maxSelect:1} }))
+    col.schema.addField(new SchemaField({ name:"type", type:"select", required:true, options:{maxSelect:1,values:["news","blog"]} }))
+    col.schema.addField(new SchemaField({ name:"tags", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"status", type:"select", options:{maxSelect:1,values:["published","draft"]} }))
+    col.schema.addField(new SchemaField({ name:"author", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
+    $app.dao().saveCollection(col)
+}
+function setupJobPostings() {
+    const usersId = $app.dao().findCollectionByNameOrId("users").id
+    const col = new Collection(); col.name = "job_postings"; col.type = "base"
+    col.listRule = "@request.auth.id != ''"; col.viewRule = col.listRule
+    col.createRule = "@request.auth.record.role = 'admin' || @request.auth.record.role = 'rh'"
+    col.updateRule = col.createRule; col.deleteRule = col.createRule
+    col.schema.addField(new SchemaField({ name:"title", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"department", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"description", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"requirements", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"type", type:"select", required:true, options:{maxSelect:1,values:["CLT","PJ","Estágio","Temporário"]} }))
+    col.schema.addField(new SchemaField({ name:"deadline", type:"date" }))
+    col.schema.addField(new SchemaField({ name:"status", type:"select", options:{maxSelect:1,values:["aberta","encerrada"]} }))
+    col.schema.addField(new SchemaField({ name:"author", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
+    $app.dao().saveCollection(col)
+}
+function setupJobApplications() {
+    const usersId = $app.dao().findCollectionByNameOrId("users").id
+    let jobsId = ""; try { jobsId = $app.dao().findCollectionByNameOrId("job_postings").id } catch (_) {}
+    const col = new Collection(); col.name = "job_applications"; col.type = "base"
+    col.listRule = "@request.auth.id = user.id || @request.auth.record.role = 'admin' || @request.auth.record.role = 'rh'"
+    col.viewRule = col.listRule
+    col.createRule = "@request.auth.id = @request.data.user"
+    col.updateRule = "@request.auth.record.role = 'admin' || @request.auth.record.role = 'rh'"
+    col.deleteRule = "@request.auth.id = user.id || @request.auth.record.role = 'admin'"
+    col.schema.addField(new SchemaField({ name:"job", type:"relation", required:true, options:{collectionId:jobsId,maxSelect:1} }))
+    col.schema.addField(new SchemaField({ name:"user", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
+    col.schema.addField(new SchemaField({ name:"message", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"status", type:"select", options:{maxSelect:1,values:["inscrito","em_analise","aprovado","reprovado"]} }))
+    $app.dao().saveCollection(col)
+}
+function setupBenefits() {
+    const usersId = $app.dao().findCollectionByNameOrId("users").id
+    const col = new Collection(); col.name = "benefits"; col.type = "base"
+    col.listRule = "@request.auth.id != ''"; col.viewRule = col.listRule
+    col.createRule = "@request.auth.record.role = 'admin' || @request.auth.record.role = 'rh'"
+    col.updateRule = col.createRule; col.deleteRule = col.createRule
+    col.schema.addField(new SchemaField({ name:"title", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"description", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"details", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"category", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"icon", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"link", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"author", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
+    $app.dao().saveCollection(col)
+}
+function setupPolls() {
+    const usersId = $app.dao().findCollectionByNameOrId("users").id
+    const col = new Collection(); col.name = "polls"; col.type = "base"
+    col.listRule = "@request.auth.id != ''"; col.viewRule = col.listRule
+    col.createRule = "@request.auth.record.role = 'admin' || @request.auth.record.role = 'rh'"
+    col.updateRule = "@request.auth.id = author.id || @request.auth.record.role = 'admin'"
+    col.deleteRule = "@request.auth.record.role = 'admin'"
+    col.schema.addField(new SchemaField({ name:"question", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"options", type:"json", required:true }))
+    col.schema.addField(new SchemaField({ name:"author", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
+    col.schema.addField(new SchemaField({ name:"deadline", type:"date" }))
+    col.schema.addField(new SchemaField({ name:"status", type:"select", options:{maxSelect:1,values:["ativa","encerrada"]} }))
+    $app.dao().saveCollection(col)
+}
+function setupPollVotes() {
+    const usersId = $app.dao().findCollectionByNameOrId("users").id
+    let pollsId = ""; try { pollsId = $app.dao().findCollectionByNameOrId("polls").id } catch (_) {}
+    const col = new Collection(); col.name = "poll_votes"; col.type = "base"
+    col.listRule = "@request.auth.id != ''"; col.viewRule = col.listRule
+    // Apenas o próprio usuário pode criar seu voto; update/delete bloqueados (imutável)
+    col.createRule = "@request.auth.id = @request.data.user"
+    // updateRule e deleteRule ficam null (somente superadmin via dashboard)
+    col.schema.addField(new SchemaField({ name:"poll", type:"relation", required:true, options:{collectionId:pollsId,maxSelect:1} }))
+    col.schema.addField(new SchemaField({ name:"user", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
+    col.schema.addField(new SchemaField({ name:"option_idx", type:"number", required:true }))
+    $app.dao().saveCollection(col)
+}
+function setupTasks() {
+    const usersId = $app.dao().findCollectionByNameOrId("users").id
+    const col = new Collection(); col.name = "tasks"; col.type = "base"
+    col.listRule = "@request.auth.id != ''"; col.viewRule = col.listRule
+    col.createRule = "@request.auth.id != ''"
+    col.updateRule = "@request.auth.id = created_by.id || @request.auth.id = assignee.id || @request.auth.record.role = 'admin'"
+    col.deleteRule = "@request.auth.id = created_by.id || @request.auth.record.role = 'admin'"
+    col.schema.addField(new SchemaField({ name:"title", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"description", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"assignee", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
+    col.schema.addField(new SchemaField({ name:"created_by", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
+    col.schema.addField(new SchemaField({ name:"due_date", type:"date" }))
+    col.schema.addField(new SchemaField({ name:"status", type:"select", options:{maxSelect:1,values:["pendente","em_andamento","concluida"]} }))
+    col.schema.addField(new SchemaField({ name:"priority", type:"select", options:{maxSelect:1,values:["baixa","media","alta"]} }))
+    col.schema.addField(new SchemaField({ name:"is_team", type:"bool" }))
+    $app.dao().saveCollection(col)
+}
+function setupTrainings() {
+    const usersId = $app.dao().findCollectionByNameOrId("users").id
+    const col = new Collection(); col.name = "trainings"; col.type = "base"
+    col.listRule = "@request.auth.id != ''"; col.viewRule = col.listRule
+    col.createRule = "@request.auth.record.role = 'admin' || @request.auth.record.role = 'rh'"
+    col.updateRule = col.createRule; col.deleteRule = col.createRule
+    col.schema.addField(new SchemaField({ name:"title", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"description", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"video_url", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"duration", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"category", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"author", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
+    $app.dao().saveCollection(col)
+}
+function setupTrainingCompletions() {
+    const usersId = $app.dao().findCollectionByNameOrId("users").id
+    let trainingsId = ""; try { trainingsId = $app.dao().findCollectionByNameOrId("trainings").id } catch (_) {}
+    const col = new Collection(); col.name = "training_completions"; col.type = "base"
+    col.listRule = "@request.auth.id != ''"; col.viewRule = col.listRule
+    // Somente o próprio usuário pode registrar sua conclusão
+    col.createRule = "@request.auth.id = @request.data.user"
+    // updateRule null = imutável; deleteRule apenas admin pode remover
+    col.deleteRule = "@request.auth.record.role = 'admin'"
+    col.schema.addField(new SchemaField({ name:"training", type:"relation", required:true, options:{collectionId:trainingsId,maxSelect:1} }))
+    col.schema.addField(new SchemaField({ name:"user", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
+    $app.dao().saveCollection(col)
+}
+function setupUsefulLinks() {
+    const usersId = $app.dao().findCollectionByNameOrId("users").id
+    const col = new Collection(); col.name = "useful_links"; col.type = "base"
+    col.listRule = "@request.auth.id != ''"; col.viewRule = col.listRule
+    col.createRule = "@request.auth.record.role = 'admin' || @request.auth.record.role = 'rh'"
+    col.updateRule = col.createRule; col.deleteRule = col.createRule
+    col.schema.addField(new SchemaField({ name:"title", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"url", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"description", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"category", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"icon", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"order", type:"number" }))
+    col.schema.addField(new SchemaField({ name:"author", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
+    $app.dao().saveCollection(col)
+}
+function setupWallCards() {
+    const usersId = $app.dao().findCollectionByNameOrId("users").id
+    const col = new Collection(); col.name = "wall_cards"; col.type = "base"
+    col.listRule = "@request.auth.id != ''"; col.viewRule = col.listRule
+    col.createRule = "@request.auth.id != ''"
+    col.updateRule = "@request.auth.id = author.id || @request.auth.record.role = 'admin'"
+    col.deleteRule = col.updateRule
+    col.schema.addField(new SchemaField({ name:"message", type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"type", type:"select", required:true, options:{maxSelect:1,values:["parabens","boas_vindas","conquista","despedida","recado"]} }))
+    col.schema.addField(new SchemaField({ name:"recipient", type:"relation", options:{collectionId:usersId,maxSelect:1} }))
+    col.schema.addField(new SchemaField({ name:"author", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
+    col.schema.addField(new SchemaField({ name:"emoji", type:"text" }))
     $app.dao().saveCollection(col)
 }

@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "../layout-dashboard";
 import { InstagramWidget } from "@/components/gallery/InstagramWidget";
 import { useGallery, useAlbumPhotos } from "@/lib/hooks/useGallery";
-import { pbFileUrl, formatDistanceToNow } from "@/lib/utils";
+import { pbFileUrl, formatDistanceToNow, compressImage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Plus, Upload, ArrowLeft, Loader2, Image as ImageIcon, X } from "lucide-react";
 import Image from "next/image";
@@ -16,7 +16,7 @@ export default function GaleriaPage() {
   const pathname = usePathname();
   const { albums, loading: albumsLoading, createAlbum } = useGallery();
   const [activeAlbum, setActiveAlbum] = useState<string | null>(null);
-  const { photos, loading: photosLoading, uploadPhotos } = useAlbumPhotos(activeAlbum);
+  const { photos, loading: photosLoading, hasMore: photosHasMore, loadMore: photosLoadMore, uploadPhotos } = useAlbumPhotos(activeAlbum);
   const [showNewAlbum, setShowNewAlbum] = useState(false);
   const [newAlbumName, setNewAlbumName] = useState("");
   const [newAlbumEvent, setNewAlbumEvent] = useState("");
@@ -34,13 +34,16 @@ export default function GaleriaPage() {
   async function handleUpload(files: FileList | File[]) {
     if (!activeAlbum || !files.length) return;
     setUploading(true);
-    try { await uploadPhotos(activeAlbum, Array.from(files)); }
-    finally { setUploading(false); }
+    try {
+      const compressed = await Promise.all(Array.from(files).map((f) => compressImage(f, 30)));
+      await uploadPhotos(activeAlbum, compressed);
+    } finally { setUploading(false); }
   }
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setDragOver(false);
-    void handleUpload(e.dataTransfer.files);
+    const imageFiles = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
+    if (imageFiles.length) void handleUpload(imageFiles);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeAlbum]);
 
@@ -140,21 +143,31 @@ export default function GaleriaPage() {
                 <p className="text-sm text-muted-foreground">Arraste fotos aqui ou clique em &quot;Adicionar fotos&quot;</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                {photos.map((photo, i) => (
-                  <motion.button key={photo.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
-                    onClick={() => setLightbox(pbFileUrl("gallery_photos", photo.id, photo.file))}
-                    className="relative aspect-square rounded-xl overflow-hidden bg-muted group">
-                    <Image src={pbFileUrl("gallery_photos", photo.id, photo.file, "400x400")}
-                      alt={photo.caption ?? ""} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
-                    {photo.caption && (
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
-                        <p className="text-white text-[10px] line-clamp-2">{photo.caption}</p>
-                      </div>
-                    )}
-                  </motion.button>
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                  {photos.map((photo, i) => (
+                    <motion.button key={photo.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
+                      onClick={() => setLightbox(pbFileUrl("gallery_photos", photo.id, photo.file))}
+                      className="relative aspect-square rounded-xl overflow-hidden bg-muted group">
+                      <Image src={pbFileUrl("gallery_photos", photo.id, photo.file, "400x400")}
+                        alt={photo.caption ?? ""} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
+                      {photo.caption && (
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                          <p className="text-white text-[10px] line-clamp-2">{photo.caption}</p>
+                        </div>
+                      )}
+                    </motion.button>
+                  ))}
+                </div>
+                {photosHasMore && (
+                  <div className="flex justify-center pt-4">
+                    <button onClick={photosLoadMore}
+                      className="px-4 py-2 text-xs font-medium rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors">
+                      Carregar mais fotos
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

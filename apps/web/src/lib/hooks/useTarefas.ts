@@ -27,7 +27,7 @@ export function useTasks(view: "minhas" | "time" | "criadas") {
   useEffect(() => {
     fetchAll();
     const pb = getPocketBase();
-    pb.collection("tasks").subscribe("*", () => fetchAll()).catch(() => {});
+    pb.collection("tasks").subscribe("*", () => fetchAll()).catch((e) => console.error("[realtime]", e));
     return () => { pb.collection("tasks").unsubscribe("*").catch(() => {}); };
   }, [fetchAll]);
 
@@ -36,9 +36,18 @@ export function useTasks(view: "minhas" | "time" | "criadas") {
     due_date: string; priority: string; is_team: boolean;
   }) => {
     const pb = getPocketBase();
+    const myId = pb.authStore.record!.id;
     await pb.collection("tasks").create({
-      ...data, status: "pendente", created_by: pb.authStore.record!.id,
+      ...data, status: "pendente", created_by: myId,
     });
+    // Notify assignee (skip self-assignment)
+    if (data.assignee && data.assignee !== myId) {
+      pb.collection("notifications").create({
+        user: data.assignee, type: "task_assigned",
+        content: `Nova tarefa atribuída a você: "${data.title}"`,
+        read: false, link: "/tarefas",
+      }).catch(() => {});
+    }
   }, []);
 
   const updateStatus = useCallback(async (id: string, status: Task["status"]) => {

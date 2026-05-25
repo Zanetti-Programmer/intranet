@@ -53,7 +53,7 @@ function deadlineDays(dl: string) {
 
 // ── Applicants panel (RH only) ──────────────────────────────────────────────
 function ApplicantsPanel({ jobId, onClose }: { jobId: string; onClose: () => void }) {
-  const { applications, loading, updateStatus } = useJobApplications(jobId);
+  const { applications, loading, hasMore, loadMore, updateStatus } = useJobApplications(jobId);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
       <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
@@ -67,7 +67,7 @@ function ApplicantsPanel({ jobId, onClose }: { jobId: string; onClose: () => voi
           : applications.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">Nenhum candidato ainda.</p>
           : (
             <div className="overflow-y-auto space-y-3">
-              {applications.map((app) => {
+              {applications.map((app, _idx) => {
                 const u = app.expand?.user;
                 const st = APP_STATUS[app.status] ?? APP_STATUS.inscrito;
                 return (
@@ -86,6 +86,11 @@ function ApplicantsPanel({ jobId, onClose }: { jobId: string; onClose: () => voi
                   </div>
                 );
               })}
+              {hasMore && (
+                <button onClick={() => loadMore()} className="w-full text-xs text-muted-foreground hover:text-foreground py-2 rounded-lg hover:bg-muted transition-colors">
+                  Carregar mais
+                </button>
+              )}
             </div>
           )
         }
@@ -103,6 +108,7 @@ function JobCard({ job, index, canManage, hasApplied, onApply, onToggle, onViewA
   const [expanded, setExpanded] = useState(false);
   const [applying, setApplying] = useState(false);
   const [message, setMessage] = useState("");
+  const myId = getPocketBase().authStore.record?.id;
   const typeCls = TYPE_COLORS[job.type] ?? "bg-muted text-muted-foreground";
   const dl = job.deadline ? deadlineDays(job.deadline) : null;
 
@@ -147,7 +153,7 @@ function JobCard({ job, index, canManage, hasApplied, onApply, onToggle, onViewA
         <div className="bg-muted/40 rounded-xl p-3 text-xs text-muted-foreground whitespace-pre-line">{job.requirements}</div>
       )}
 
-      {job.status === "aberta" && !canManage && (
+      {job.status === "aberta" && !canManage && job.author !== myId && (
         <div className="pt-1 border-t border-border/50">
           {hasApplied ? (
             <p className="text-xs text-emerald-400 flex items-center gap-1.5">

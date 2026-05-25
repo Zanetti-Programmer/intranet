@@ -3,7 +3,7 @@ import { useRef, useState, KeyboardEvent } from "react";
 import { Paperclip, Send, X, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { cn, compressImage } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 const QUICK_EMOJIS = ["😄", "👍", "❤️", "🎉", "🔥", "😮", "🤔", "👏"];
@@ -24,11 +24,12 @@ export function MessageInput({ onSend, onTyping, onStopTyping, disabled, placeho
   const [sending, setSending] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  function addFiles(picked: FileList | null) {
+  async function addFiles(picked: FileList | null) {
     if (!picked) return;
     const arr = Array.from(picked).slice(0, 5);
-    setFiles((prev) => [...prev, ...arr].slice(0, 5));
-    arr.forEach((f) => {
+    const compressed = await Promise.all(arr.map((f) => compressImage(f, 10)));
+    setFiles((prev) => [...prev, ...compressed].slice(0, 5));
+    compressed.forEach((f) => {
       const isImage = f.type.startsWith("image/");
       if (isImage) {
         const reader = new FileReader();

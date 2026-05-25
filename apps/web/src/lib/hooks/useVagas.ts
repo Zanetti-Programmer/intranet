@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import getPocketBase from "@/lib/pocketbase";
 import type { JobPosting, JobApplication } from "@/types";
 
@@ -29,8 +29,8 @@ export function useVagas() {
   useEffect(() => {
     fetchAll();
     const pb = getPocketBase();
-    pb.collection("job_postings").subscribe("*", () => fetchAll()).catch(() => {});
-    pb.collection("job_applications").subscribe("*", () => fetchAll()).catch(() => {});
+    pb.collection("job_postings").subscribe("*", () => fetchAll()).catch((e) => console.error("[realtime]", e));
+    pb.collection("job_applications").subscribe("*", () => fetchAll()).catch((e) => console.error("[realtime]", e));
     return () => {
       pb.collection("job_postings").unsubscribe("*").catch(() => {});
       pb.collection("job_applications").unsubscribe("*").catch(() => {});
@@ -55,11 +55,16 @@ export function useVagas() {
   }, []);
 
   const toggleJobStatus = useCallback(async (jobId: string, current: string) => {
-    const pb = getPocketBase();
-    await pb.collection("job_postings").update(jobId, {
-      status: current === "aberta" ? "encerrada" : "aberta",
-    });
-  }, []);
+    const newStatus = current === "aberta" ? "encerrada" : "aberta";
+    const prev = jobs;
+    setJobs((p) => p.map((j) => j.id === jobId ? { ...j, status: newStatus as JobPosting["status"] } : j));
+    try {
+      await getPocketBase().collection("job_postings").update(jobId, { status: newStatus });
+    } catch (err) {
+      setJobs(prev);
+      throw err;
+    }
+  }, [jobs]);
 
   const hasApplied = useCallback((jobId: string) =>
     myApplications.some((a) => a.job === jobId), [myApplications]);
@@ -67,24 +72,49 @@ export function useVagas() {
   return { jobs, myApplications, loading, createJob, applyToJob, toggleJobStatus, hasApplied };
 }
 
+const APPS_PAGE_SIZE = 25;
+
 export function useJobApplications(jobId: string) {
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
+  const pageRef = useRef(1);
 
-  useEffect(() => {
+  const load = useCallback(async (page: number) => {
     const pb = getPocketBase();
-    pb.collection("job_applications").getFullList({
-      filter: `job = "${jobId}"`, expand: "user", sort: "-created",
-    }).then((r) => setApplications(r as unknown as JobApplication[]))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    setLoading(true);
+    try {
+      const result = await pb.collection("job_applications").getList(page, APPS_PAGE_SIZE, {
+        filter: `job = "${jobId}"`, expand: "user", sort: "-created",
+      });
+      if (page === 1) {
+        setApplications(result.items as unknown as JobApplication[]);
+      } else {
+        setApplications((prev) => [...prev, ...result.items as unknown as JobApplication[]]);
+      }
+      setHasMore(result.totalPages > page);
+      pageRef.current = page;
+    } catch {
+      if (page === 1) setApplications([]);
+    } finally {
+      setLoading(false);
+    }
   }, [jobId]);
 
-  const updateStatus = useCallback(async (appId: string, status: string) => {
-    const pb = getPocketBase();
-    await pb.collection("job_applications").update(appId, { status });
-    setApplications((prev) => prev.map((a) => a.id === appId ? { ...a, status: status as JobApplication["status"] } : a));
-  }, []);
+  useEffect(() => { load(1); }, [load]);
 
-  return { applications, loading, updateStatus };
+  const loadMore = useCallback(() => { load(pageRef.current + 1); }, [load]);
+
+  const updateStatus = useCallback(async (appId: string, status: string) => {
+    const prev = applications;
+    setApplications((p) => p.map((a) => a.id === appId ? { ...a, status: status as JobApplication["status"] } : a));
+    try {
+      await getPocketBase().collection("job_applications").update(appId, { status });
+    } catch (err) {
+      setApplications(prev);
+      throw err;
+    }
+  }, [applications]);
+
+  return { applications, loading, hasMore, loadMore, updateStatus };
 }

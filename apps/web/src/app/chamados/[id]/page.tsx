@@ -36,7 +36,7 @@ export default function TicketDetailPage() {
   const [sendingComment, setSendingComment] = useState(false);
   const myId = getPocketBase().authStore.record?.id;
   const myRole = (getPocketBase().authStore.record as { role?: string })?.role;
-  const canChangeStatus = myRole === "admin" || myRole === "ti" || ticket?.author === myId;
+  const canChangeStatus = myRole === "admin" || myRole === "ti";
 
   async function handleComment() {
     if (!newComment.trim()) return;

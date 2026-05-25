@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import getPocketBase from "@/lib/pocketbase";
 import type { User } from "@/types";
 
@@ -55,19 +55,44 @@ export function useGallery() {
   return { albums, loading, fetchAlbums, createAlbum };
 }
 
+const PHOTOS_PAGE_SIZE = 50;
+
 export function useAlbumPhotos(albumId: string | null) {
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const pageRef = useRef(1);
 
-  useEffect(() => {
-    if (!albumId) return;
+  const loadPage = useCallback(async (albumId: string, page: number) => {
     const pb = getPocketBase();
     setLoading(true);
-    pb.collection("gallery_photos").getFullList({
-      filter: `album = "${albumId}"`, sort: "created", expand: "author",
-    }).then((r) => setPhotos(r as unknown as GalleryPhoto[]))
-      .catch(() => {}).finally(() => setLoading(false));
-  }, [albumId]);
+    try {
+      const result = await pb.collection("gallery_photos").getList(page, PHOTOS_PAGE_SIZE, {
+        filter: `album = "${albumId}"`, sort: "created",
+      });
+      if (page === 1) {
+        setPhotos(result.items as unknown as GalleryPhoto[]);
+      } else {
+        setPhotos((prev) => [...prev, ...result.items as unknown as GalleryPhoto[]]);
+      }
+      setHasMore(result.totalPages > page);
+      pageRef.current = page;
+    } catch {
+      if (page === 1) setPhotos([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!albumId) { setPhotos([]); setHasMore(false); return; }
+    pageRef.current = 1;
+    loadPage(albumId, 1);
+  }, [albumId, loadPage]);
+
+  const loadMore = useCallback(() => {
+    if (albumId) loadPage(albumId, pageRef.current + 1);
+  }, [albumId, loadPage]);
 
   const uploadPhotos = useCallback(async (albumId: string, files: File[]) => {
     const pb = getPocketBase();
@@ -88,5 +113,5 @@ export function useAlbumPhotos(albumId: string | null) {
     setPhotos((p) => p.filter((ph) => ph.id !== id));
   }, []);
 
-  return { photos, loading, uploadPhotos, deletePhoto };
+  return { photos, loading, hasMore, loadMore, uploadPhotos, deletePhoto };
 }
