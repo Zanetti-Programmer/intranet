@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 interface Props {
   onSubmit: (data: { title: string; description: string; category: string; priority: string }) => Promise<void>;
@@ -25,6 +26,9 @@ export function TicketForm({ onSubmit, onClose }: Props) {
     try {
       await onSubmit({ title, description, category, priority });
       onClose();
+    } catch (err) {
+      console.error("[TicketForm] submit failed:", err);
+      toast.error("Erro ao abrir chamado.");
     } finally { setLoading(false); }
   }
 

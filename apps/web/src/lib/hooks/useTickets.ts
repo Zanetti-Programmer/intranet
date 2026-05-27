@@ -26,7 +26,7 @@ export function useTickets(statusFilter?: string) {
         sort: "-created", expand: "author,assignee", filter,
       });
       setTickets(items.items as unknown as Ticket[]);
-    } catch { setTickets([]); }
+    } catch (e) { console.error("[useTickets] fetch:", e); }
     finally { setLoading(false); }
   }, [statusFilter]);
 

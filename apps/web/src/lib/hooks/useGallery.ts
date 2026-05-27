@@ -52,7 +52,15 @@ export function useGallery() {
     return r.id;
   }, [fetchAlbums]);
 
-  return { albums, loading, fetchAlbums, createAlbum };
+  const deleteAlbum = useCallback(async (id: string) => {
+    const pb = getPocketBase();
+    const photos = await pb.collection("gallery_photos").getFullList({ filter: `album = "${id}"`, fields: "id" });
+    await Promise.all(photos.map((p) => pb.collection("gallery_photos").delete(p.id)));
+    await pb.collection("gallery_albums").delete(id);
+    setAlbums((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
+  return { albums, loading, fetchAlbums, createAlbum, deleteAlbum };
 }
 
 const PHOTOS_PAGE_SIZE = 50;

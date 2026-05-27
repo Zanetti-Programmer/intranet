@@ -21,7 +21,7 @@ export function useArticles(type: "news" | "blog") {
         sort: "-created", expand: "author", filter,
       });
       setArticles(items as unknown as Article[]);
-    } catch { setArticles([]); }
+    } catch (e) { console.error("[useArticles] fetchAll:", e); }
     finally { setLoading(false); }
   }, [type, canSeeDrafts]);
 
@@ -58,5 +58,11 @@ export function useArticles(type: "news" | "blog") {
     fetchAll();
   }, [fetchAll]);
 
-  return { articles, loading, createArticle, deleteArticle, publishArticle, canSeeDrafts };
+  const updateArticle = useCallback(async (id: string, data: {
+    title: string; content: string; tags: string; status: string;
+  }) => {
+    await getPocketBase().collection("articles").update(id, data);
+  }, []);
+
+  return { articles, loading, createArticle, deleteArticle, publishArticle, updateArticle, canSeeDrafts };
 }

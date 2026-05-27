@@ -13,8 +13,9 @@ import { Label } from "@/components/ui/label";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import {
   Plus, Loader2, Search, Briefcase, X, ChevronDown, ChevronUp, Users,
-  Clock, CheckCircle, XCircle, Send,
+  Clock, CheckCircle, XCircle, Send, ExternalLink,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import getPocketBase from "@/lib/pocketbase";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -109,6 +110,7 @@ function JobCard({ job, index, canManage, hasApplied, onApply, onToggle, onViewA
   const [applying, setApplying] = useState(false);
   const [message, setMessage] = useState("");
   const myId = getPocketBase().authStore.record?.id;
+  const router = useRouter();
   const typeCls = TYPE_COLORS[job.type] ?? "bg-muted text-muted-foreground";
   const dl = job.deadline ? deadlineDays(job.deadline) : null;
 
@@ -123,7 +125,10 @@ function JobCard({ job, index, canManage, hasApplied, onApply, onToggle, onViewA
             {job.status === "encerrada" && <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Encerrada</span>}
             {dl && job.status === "aberta" && <span className="text-[11px] text-amber-400 flex items-center gap-1"><Clock style={{ width: 11, height: 11 }} />{dl}</span>}
           </div>
-          <h3 className="font-semibold text-sm">{job.title}</h3>
+          <h3 className="font-semibold text-sm cursor-pointer hover:text-primary transition-colors"
+            onClick={() => router.push(`/vagas/${job.id}`)}>
+            {job.title}
+          </h3>
           {job.department && <p className="text-xs text-muted-foreground">{job.department}</p>}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
@@ -144,11 +149,17 @@ function JobCard({ job, index, canManage, hasApplied, onApply, onToggle, onViewA
 
       <p className={cn("text-sm text-muted-foreground leading-relaxed", !expanded && "line-clamp-3")}>{job.description}</p>
 
-      {job.requirements && (
-        <button onClick={() => setExpanded(!expanded)} className="text-xs text-primary hover:underline flex items-center gap-1">
-          {expanded ? <><ChevronUp style={{ width: 12, height: 12 }} />Menos detalhes</> : <><ChevronDown style={{ width: 12, height: 12 }} />Ver requisitos</>}
+      <div className="flex items-center gap-3">
+        {job.requirements && (
+          <button onClick={() => setExpanded(!expanded)} className="text-xs text-primary hover:underline flex items-center gap-1">
+            {expanded ? <><ChevronUp style={{ width: 12, height: 12 }} />Menos detalhes</> : <><ChevronDown style={{ width: 12, height: 12 }} />Ver requisitos</>}
+          </button>
+        )}
+        <button onClick={() => router.push(`/vagas/${job.id}`)}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
+          <ExternalLink style={{ width: 11, height: 11 }} /> Ver vaga completa
         </button>
-      )}
+      </div>
       {expanded && job.requirements && (
         <div className="bg-muted/40 rounded-xl p-3 text-xs text-muted-foreground whitespace-pre-line">{job.requirements}</div>
       )}

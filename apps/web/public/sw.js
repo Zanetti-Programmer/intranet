@@ -1,6 +1,6 @@
 // Service Worker — Intranet Corporativa
 // Bump CACHE_VERSION to force all clients to clear stale caches.
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `intranet-${CACHE_VERSION}`;
 
 self.addEventListener('install', () => {
@@ -28,7 +28,7 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(new Request(request, { cache: 'no-store' })).catch(() =>
-        caches.match('/') || fetch(request)
+        caches.match('/').then((cached) => cached || fetch(request))
       )
     );
     return;
@@ -52,5 +52,9 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Everything else: network-first, no caching (manifest, icons, fonts, etc.)
-  event.respondWith(fetch(request).catch(() => caches.match(request)));
+  event.respondWith(
+    fetch(request).catch(() =>
+      caches.match(request).then((cached) => cached || new Response('', { status: 503 }))
+    )
+  );
 });

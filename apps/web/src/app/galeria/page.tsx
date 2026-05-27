@@ -9,12 +9,13 @@ import { InstagramWidget } from "@/components/gallery/InstagramWidget";
 import { useGallery, useAlbumPhotos } from "@/lib/hooks/useGallery";
 import { pbFileUrl, formatDistanceToNow, compressImage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, ArrowLeft, Loader2, Image as ImageIcon, X } from "lucide-react";
+import { Plus, Upload, ArrowLeft, Loader2, Image as ImageIcon, X, Trash2 } from "lucide-react";
 import Image from "next/image";
+import { toast } from "sonner";
 
 export default function GaleriaPage() {
   const pathname = usePathname();
-  const { albums, loading: albumsLoading, createAlbum } = useGallery();
+  const { albums, loading: albumsLoading, createAlbum, deleteAlbum } = useGallery();
   const [activeAlbum, setActiveAlbum] = useState<string | null>(null);
   const { photos, loading: photosLoading, hasMore: photosHasMore, loadMore: photosLoadMore, uploadPhotos } = useAlbumPhotos(activeAlbum);
   const [showNewAlbum, setShowNewAlbum] = useState(false);
@@ -35,8 +36,13 @@ export default function GaleriaPage() {
     if (!activeAlbum || !files.length) return;
     setUploading(true);
     try {
-      const compressed = await Promise.all(Array.from(files).map((f) => compressImage(f, 30)));
+      const imageFiles = Array.from(files).filter((f) => f.type.startsWith("image/"));
+      if (!imageFiles.length) { toast.error("Selecione apenas imagens (JPG, PNG, GIF, WebP)."); return; }
+      const compressed = await Promise.all(imageFiles.map((f) => compressImage(f, 30)));
       await uploadPhotos(activeAlbum, compressed);
+      toast.success(`${compressed.length} foto${compressed.length > 1 ? "s" : ""} enviada${compressed.length > 1 ? "s" : ""}!`);
+    } catch {
+      toast.error("Erro ao enviar fotos. Verifique o formato (JPG, PNG, GIF, WebP).");
     } finally { setUploading(false); }
   }
 
@@ -106,25 +112,31 @@ export default function GaleriaPage() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {albums.map((album, i) => (
-                  <motion.button key={album.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                    onClick={() => setActiveAlbum(album.id)}
-                    className="group text-left bg-card border border-border rounded-xl overflow-hidden hover:border-primary/30 transition-colors">
-                    <div className="aspect-square bg-muted relative">
-                      {album.cover ? (
-                        <Image src={pbFileUrl("gallery_albums", album.id, album.cover, "400x400")} alt={album.name}
-                          fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <ImageIcon className="w-8 h-8 text-muted-foreground/30" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-3">
-                      <p className="font-medium text-sm truncate">{album.name}</p>
-                      {album.event_name && <p className="text-xs text-muted-foreground truncate">{album.event_name}</p>}
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{formatDistanceToNow(album.created)}</p>
-                    </div>
-                  </motion.button>
+                  <motion.div key={album.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+                    className="group relative text-left bg-card border border-border rounded-xl overflow-hidden hover:border-primary/30 transition-colors">
+                    <button onClick={() => setActiveAlbum(album.id)} className="w-full text-left">
+                      <div className="aspect-square bg-muted relative">
+                        {album.cover ? (
+                          <Image src={pbFileUrl("gallery_albums", album.id, album.cover, "400x400")} alt={album.name}
+                            fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ImageIcon className="w-8 h-8 text-muted-foreground/30" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-3">
+                        <p className="font-medium text-sm truncate">{album.name}</p>
+                        {album.event_name && <p className="text-xs text-muted-foreground truncate">{album.event_name}</p>}
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{formatDistanceToNow(album.created)}</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={async (e) => { e.stopPropagation(); if (!confirm(`Excluir álbum "${album.name}" e todas as fotos?`)) return; try { await deleteAlbum(album.id); toast.success("Álbum excluído."); } catch { toast.error("Erro ao excluir álbum."); } }}
+                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </motion.div>
                 ))}
               </div>
             )}

@@ -76,5 +76,15 @@ export function useAnnouncements() {
       )).catch(() => {});
   }, []);
 
-  return { announcements, loading, createAnnouncement };
+  const updateAnnouncement = useCallback(async (id: string, data: {
+    title: string; content: string; category: string; priority: string; pinned: boolean;
+  }) => {
+    await getPocketBase().collection("announcements").update(id, data);
+  }, []);
+
+  const deleteAnnouncement = useCallback(async (id: string) => {
+    await getPocketBase().collection("announcements").delete(id);
+  }, []);
+
+  return { announcements, loading, createAnnouncement, updateAnnouncement, deleteAnnouncement };
 }

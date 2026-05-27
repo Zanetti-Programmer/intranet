@@ -5,7 +5,6 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { cn } from "@/lib/utils";
 import getPocketBase from "@/lib/pocketbase";
-import { Loader2 } from "lucide-react";
 
 export function DashboardLayout({
   children,
@@ -18,19 +17,17 @@ export function DashboardLayout({
 }) {
   const router = useRouter();
 
+  // Auth check is deferred to useEffect to avoid SSR/hydration mismatch.
+  // The Next.js middleware is the primary auth guard; this handles session expiry.
   useEffect(() => {
-    if (!getPocketBase().authStore.isValid) {
+    const pb = getPocketBase();
+    if (!pb.authStore.isValid) {
       router.replace("/login");
     }
+    return pb.authStore.onChange((token) => {
+      if (!token) router.replace("/login");
+    }, false);
   }, [router]);
-
-  if (!getPocketBase().authStore.isValid) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-screen overflow-hidden">

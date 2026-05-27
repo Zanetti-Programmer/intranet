@@ -11,6 +11,8 @@ export function useAuth() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Re-sync after hydration: server renders with no localStorage, so initial state may be null
+    setUser(pb.authStore.isValid ? (pb.authStore.record as unknown as User) : null);
     return pb.authStore.onChange(() => {
       setUser(
         pb.authStore.isValid

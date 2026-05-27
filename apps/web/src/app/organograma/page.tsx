@@ -6,7 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "../layout-dashboard";
 import { UserAvatar } from "@/components/shared/UserAvatar";
-import { Loader2, GitBranch, MessageSquare, Info } from "lucide-react";
+import { Loader2, GitBranch, MessageSquare, Info, Pencil, X } from "lucide-react";
+import { toast } from "sonner";
 import getPocketBase from "@/lib/pocketbase";
 import { useChannels } from "@/lib/hooks/useChannels";
 import { cn } from "@/lib/utils";
@@ -49,7 +50,53 @@ const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
   user:  { label: "Usuário", cls: "bg-muted text-muted-foreground" },
 };
 
-function OrgNode({ node, onDM, depth = 0 }: { node: TreeNode; onDM: (id: string) => void; depth?: number }) {
+function ManagerModal({ user, allUsers, onSave, onClose }: {
+  user: UserWithManager; allUsers: UserWithManager[];
+  onSave: (userId: string, managerId: string) => Promise<void>; onClose: () => void;
+}) {
+  const [selected, setSelected] = useState(user.manager ?? "");
+  const [saving, setSaving] = useState(false);
+  const options = allUsers.filter((u) => u.id !== user.id);
+
+  async function save() {
+    setSaving(true);
+    try { await onSave(user.id, selected); onClose(); }
+    catch { toast.error("Erro ao salvar."); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
+      <div className="bg-card border border-border rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4"
+        onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-sm">Gerente de {user.name}</h3>
+          <button onClick={onClose}><X className="w-4 h-4 text-muted-foreground" /></button>
+        </div>
+        <select value={selected} onChange={(e) => setSelected(e.target.value)}
+          className="w-full h-9 rounded-md border border-input bg-transparent px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring">
+          <option value="">— Sem gerente (raiz) —</option>
+          {options.map((u) => (
+            <option key={u.id} value={u.id}>{u.name} ({u.department || u.role})</option>
+          ))}
+        </select>
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 h-9 rounded-lg border border-border text-sm hover:bg-muted transition-colors">Cancelar</button>
+          <button onClick={() => void save()} disabled={saving}
+            className="flex-1 h-9 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : "Salvar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OrgNode({ node, onDM, onEditManager, canAdmin, depth = 0 }: {
+  node: TreeNode; onDM: (id: string) => void;
+  onEditManager: (user: UserWithManager) => void;
+  canAdmin: boolean; depth?: number;
+}) {
   const badge = ROLE_BADGE[node.user.role] ?? ROLE_BADGE.user;
   const myId = getPocketBase().authStore.record?.id;
 
@@ -71,27 +118,29 @@ function OrgNode({ node, onDM, depth = 0 }: { node: TreeNode; onDM: (id: string)
             {badge.label}
           </span>
         </div>
-        {node.user.id !== myId && (
-          <button
-            onClick={() => onDM(node.user.id)}
-            className="absolute top-1.5 right-1.5 w-6 h-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-            title="Enviar mensagem"
-          >
-            <MessageSquare style={{ width: 11, height: 11 }} />
-          </button>
-        )}
+        <div className="absolute top-1.5 right-1.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          {canAdmin && (
+            <button onClick={() => onEditManager(node.user)}
+              className="w-5 h-5 rounded bg-muted text-muted-foreground hover:text-primary flex items-center justify-center" title="Editar gerente">
+              <Pencil style={{ width: 9, height: 9 }} />
+            </button>
+          )}
+          {node.user.id !== myId && (
+            <button onClick={() => onDM(node.user.id)}
+              className="w-5 h-5 rounded bg-primary/10 text-primary flex items-center justify-center" title="Enviar mensagem">
+              <MessageSquare style={{ width: 9, height: 9 }} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Children */}
       {node.children.length > 0 && (
         <>
-          {/* Vertical line down */}
           <div className="w-px h-5 bg-border" />
-          {/* Horizontal line + branches */}
           <div className="flex items-start gap-0">
             {node.children.map((child, i) => (
               <div key={child.user.id} className="flex flex-col items-center relative">
-                {/* Horizontal connector */}
                 {node.children.length > 1 && (
                   <div className={cn(
                     "h-px bg-border absolute top-0",
@@ -100,9 +149,8 @@ function OrgNode({ node, onDM, depth = 0 }: { node: TreeNode; onDM: (id: string)
                     "left-0 right-0"
                   )} />
                 )}
-                {/* Vertical line to child */}
                 <div className="w-px h-5 bg-border" />
-                <OrgNode node={child} onDM={onDM} depth={depth + 1} />
+                <OrgNode node={child} onDM={onDM} onEditManager={onEditManager} canAdmin={canAdmin} depth={depth + 1} />
               </div>
             ))}
           </div>
@@ -112,7 +160,10 @@ function OrgNode({ node, onDM, depth = 0 }: { node: TreeNode; onDM: (id: string)
   );
 }
 
-function DeptView({ users, onDM }: { users: UserWithManager[]; onDM: (id: string) => void }) {
+function DeptView({ users, onDM, onEditManager, canAdmin }: {
+  users: UserWithManager[]; onDM: (id: string) => void;
+  onEditManager: (user: UserWithManager) => void; canAdmin: boolean;
+}) {
   const grouped: Record<string, UserWithManager[]> = {};
   users.forEach((u) => {
     const dept = u.department || "Sem departamento";
@@ -145,15 +196,20 @@ function DeptView({ users, onDM }: { users: UserWithManager[]; onDM: (id: string
                   <UserAvatar user={u} size="md" />
                   <p className="text-xs font-medium text-center line-clamp-2 leading-tight">{u.name}</p>
                   <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full", badge.cls)}>{badge.label}</span>
-                  {u.id !== myId && (
-                    <button
-                      onClick={() => onDM(u.id)}
-                      className="absolute top-1 right-1 w-5 h-5 rounded bg-primary/10 text-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Mensagem"
-                    >
-                      <MessageSquare style={{ width: 10, height: 10 }} />
-                    </button>
-                  )}
+                  <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {canAdmin && (
+                      <button onClick={() => onEditManager(u)}
+                        className="w-5 h-5 rounded bg-muted text-muted-foreground hover:text-primary flex items-center justify-center" title="Editar gerente">
+                        <Pencil style={{ width: 9, height: 9 }} />
+                      </button>
+                    )}
+                    {u.id !== myId && (
+                      <button onClick={() => onDM(u.id)}
+                        className="w-5 h-5 rounded bg-primary/10 text-primary flex items-center justify-center" title="Mensagem">
+                        <MessageSquare style={{ width: 10, height: 10 }} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -170,19 +226,31 @@ export default function OrganogramaPage() {
   const { createDM } = useChannels();
   const [users, setUsers] = useState<UserWithManager[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingUser, setEditingUser] = useState<UserWithManager | null>(null);
 
-  useEffect(() => {
+  const myRole = (getPocketBase().authStore.record as { role?: string })?.role;
+  const canAdmin = myRole === "admin" || myRole === "rh";
+
+  function loadUsers() {
     const pb = getPocketBase();
     if (!pb.authStore.isValid) return;
     pb.collection("users").getFullList({ sort: "name", expand: "manager" })
       .then((r) => setUsers(r as unknown as UserWithManager[]))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(() => { loadUsers(); }, []);
 
   async function handleDM(userId: string) {
     const channelId = await createDM(userId);
     router.push(`/chat/${channelId}`);
+  }
+
+  async function handleSaveManager(userId: string, managerId: string) {
+    await getPocketBase().collection("users").update(userId, { manager: managerId || null });
+    toast.success("Gerente atualizado.");
+    loadUsers();
   }
 
   const tree = buildTree(users);
@@ -202,14 +270,9 @@ export default function OrganogramaPage() {
         </div>
 
         {!hasTree && !loading && (
-          <div className="flex items-start gap-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-sm text-amber-400">
+          <div className="flex items-start gap-2.5 bg-muted border border-border rounded-xl p-3 text-sm text-muted-foreground">
             <Info className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>
-              Nenhuma hierarquia configurada ainda. Para ativar a árvore, acesse{" "}
-              <code className="bg-amber-500/20 px-1 rounded text-xs">http://localhost/_/</code>{" "}
-              → Collections → users → adicionar campo <strong>manager</strong> (Relation → users).
-              Por ora, exibindo por departamento.
-            </span>
+            <span>Nenhum gerente configurado — exibindo por departamento. Edite um usuário e defina o campo <strong>Gerente</strong> para ativar a árvore hierárquica.</span>
           </div>
         )}
 
@@ -222,13 +285,18 @@ export default function OrganogramaPage() {
             <div className="flex gap-8 justify-start min-w-max px-4 pt-4">
               {tree.map((root, i) => (
                 <motion.div key={root.user.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-                  <OrgNode node={root} onDM={handleDM} />
+                  <OrgNode node={root} onDM={handleDM} onEditManager={setEditingUser} canAdmin={canAdmin} />
                 </motion.div>
               ))}
             </div>
           </div>
         ) : (
-          <DeptView users={users} onDM={handleDM} />
+          <DeptView users={users} onDM={handleDM} onEditManager={setEditingUser} canAdmin={canAdmin} />
+        )}
+
+        {editingUser && (
+          <ManagerModal user={editingUser} allUsers={users}
+            onSave={handleSaveManager} onClose={() => setEditingUser(null)} />
         )}
       </div>
     </DashboardLayout>

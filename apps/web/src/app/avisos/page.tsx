@@ -18,7 +18,7 @@ const FILTERS = ["Todos", "Pinados", "Geral", "RH", "TI", "Comercial", "Outros"]
 
 export default function AvisosPage() {
   const pathname = usePathname();
-  const { announcements, loading, createAnnouncement } = useAnnouncements();
+  const { announcements, loading, createAnnouncement, updateAnnouncement, deleteAnnouncement } = useAnnouncements();
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState("Todos");
   const [search, setSearch] = useState("");
@@ -113,7 +113,10 @@ export default function AvisosPage() {
         ) : (
           <div className="space-y-3">
             {filtered.map((a, i) => (
-              <AnnouncementCard key={a.id} announcement={a} index={i} />
+              <AnnouncementCard key={a.id} announcement={a} index={i}
+                canEdit={canCreate}
+                onUpdate={updateAnnouncement}
+                onDelete={deleteAnnouncement} />
             ))}
           </div>
         )}

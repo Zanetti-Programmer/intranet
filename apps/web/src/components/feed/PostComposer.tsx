@@ -9,6 +9,7 @@ import type { Space } from "@/types";
 import { Image as ImageIcon, X, Loader2, ChevronDown } from "lucide-react";
 import NextImage from "next/image";
 import { cn, compressImage } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface Props {
   spaces: Space[];
@@ -54,6 +55,9 @@ export function PostComposer({ spaces, onSubmit, defaultSpaceId }: Props) {
       setFiles([]);
       setPreviews([]);
       setExpanded(false);
+    } catch (err) {
+      console.error("[PostComposer] createPost failed:", err);
+      toast.error("Erro ao publicar.");
     } finally {
       setLoading(false);
     }

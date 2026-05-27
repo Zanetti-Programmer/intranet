@@ -1,5 +1,8 @@
 /// <reference path="../pb_data/types.d.ts" />
 
+// NOTE: In PocketBase v0.22 JSVM, Handler<T> = (e: T) => void — no e.next().
+// Handlers auto-proceed after returning; throw to block.
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function sendMail(to, subject, htmlBody) {
@@ -53,7 +56,7 @@ function linkButton(href, label) {
 
 // ── Hook 1: Chamado criado → notificar equipe TI ──────────────────────────────
 $app.onRecordAfterCreateRequest().add(function(e) {
-    if (e.collection.name !== "tickets") { e.next(); return; }
+    if (e.collection.name !== "tickets") return;
     try {
         const ticket = e.record;
         const tiUsers = $app.dao().findRecordsByFilter("users", "role = 'ti'", "", 0, 0);
@@ -76,16 +79,15 @@ $app.onRecordAfterCreateRequest().add(function(e) {
             sendMail(u.email, subject, html);
         });
     } catch (err) { console.error("[email] ticket create:", String(err)); }
-    e.next();
 });
 
 // ── Hook 2: Chamado atualizado (status) → notificar autor ─────────────────────
 $app.onRecordAfterUpdateRequest().add(function(e) {
-    if (e.collection.name !== "tickets") { e.next(); return; }
+    if (e.collection.name !== "tickets") return;
     try {
         const ticket = e.record;
         const authorId = ticket.getString("author");
-        if (!authorId) { e.next(); return; }
+        if (!authorId) return;
         const author = $app.dao().findRecordById("users", authorId);
         const STATUS_PT = {
             aberto: "Aberto", em_andamento: "Em andamento",
@@ -104,17 +106,16 @@ $app.onRecordAfterUpdateRequest().add(function(e) {
         );
         sendMail(author.email, subject, html);
     } catch (err) { console.error("[email] ticket update:", String(err)); }
-    e.next();
 });
 
 // ── Hook 3: Tarefa atribuída → notificar assignee ─────────────────────────────
 $app.onRecordAfterCreateRequest().add(function(e) {
-    if (e.collection.name !== "tasks") { e.next(); return; }
+    if (e.collection.name !== "tasks") return;
     try {
         const task = e.record;
         const assigneeId = task.getString("assignee");
         const createdById = task.getString("created_by");
-        if (!assigneeId || assigneeId === createdById) { e.next(); return; }
+        if (!assigneeId || assigneeId === createdById) return;
         const assignee = $app.dao().findRecordById("users", assigneeId);
         const dueDate = task.getString("due_date");
         const dueLine = dueDate
@@ -130,16 +131,15 @@ $app.onRecordAfterCreateRequest().add(function(e) {
         );
         sendMail(assignee.email, subject, html);
     } catch (err) { console.error("[email] task create:", String(err)); }
-    e.next();
 });
 
 // ── Hook 4: Conquista recebida → notificar recipient ──────────────────────────
 $app.onRecordAfterCreateRequest().add(function(e) {
-    if (e.collection.name !== "achievements") { e.next(); return; }
+    if (e.collection.name !== "achievements") return;
     try {
         const badge = e.record;
         const recipientId = badge.getString("recipient");
-        if (!recipientId) { e.next(); return; }
+        if (!recipientId) return;
         const recipient = $app.dao().findRecordById("users", recipientId);
         const subject = "[Intranet] Você recebeu: " + badge.getString("title") + " " + badge.getString("icon");
         const html = emailTemplate(
@@ -153,12 +153,11 @@ $app.onRecordAfterCreateRequest().add(function(e) {
         );
         sendMail(recipient.email, subject, html);
     } catch (err) { console.error("[email] achievement create:", String(err)); }
-    e.next();
 });
 
 // ── Hook 5: Aviso publicado → notificar todos ─────────────────────────────────
 $app.onRecordAfterCreateRequest().add(function(e) {
-    if (e.collection.name !== "announcements") { e.next(); return; }
+    if (e.collection.name !== "announcements") return;
     try {
         const ann = e.record;
         const authorId = ann.getString("author");
@@ -175,5 +174,4 @@ $app.onRecordAfterCreateRequest().add(function(e) {
             if (u.id !== authorId) sendMail(u.email, subject, html);
         });
     } catch (err) { console.error("[email] announcement create:", String(err)); }
-    e.next();
 });

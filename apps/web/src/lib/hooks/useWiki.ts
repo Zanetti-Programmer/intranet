@@ -15,8 +15,8 @@ export function useWiki() {
         sort: "category,title", expand: "author",
       });
       setArticles(items as unknown as WikiArticle[]);
-    } catch {
-      setArticles([]);
+    } catch (e) {
+      console.error("[useWiki] fetchAll:", e);
     } finally {
       setLoading(false);
     }
@@ -34,7 +34,8 @@ export function useWiki() {
   }) => {
     const pb = getPocketBase();
     await pb.collection("wiki_articles").create({ ...data, author: pb.authStore.record!.id });
-  }, []);
+    fetchAll();
+  }, [fetchAll]);
 
   const updateArticle = useCallback(async (id: string, data: {
     title: string; content: string; category: string; tags: string;

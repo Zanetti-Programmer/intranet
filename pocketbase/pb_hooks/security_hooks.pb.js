@@ -1,54 +1,58 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 // ── Startup: corrigir regras de coleções que podem ter sido criadas sem segurança ──
-try {
-    const eventsCol = $app.dao().findCollectionByNameOrId("events")
-    const desired = "@request.auth.record.role = 'admin' || @request.auth.record.role = 'rh'"
-    if (eventsCol.createRule !== desired) {
-        eventsCol.createRule = desired
-        $app.dao().saveCollection(eventsCol)
-        console.log("[security] events.createRule atualizado para admin/rh")
-    }
-} catch (_) {}
+// NOTE: top-level code runs before DAO is ready; wrap in onBeforeServe
+$app.onBeforeServe().add(function(_e) {
+    try {
+        const eventsCol = $app.dao().findCollectionByNameOrId("events")
+        const desired = "@request.auth.role = 'admin' || @request.auth.role = 'rh'"
+        if (eventsCol.createRule !== desired) {
+            eventsCol.createRule = desired
+            $app.dao().saveCollection(eventsCol)
+            console.log("[security] events.createRule atualizado para admin/rh")
+        }
+    } catch (_) {}
+})
+
+// NOTE: In PocketBase v0.22 JSVM, Handler<T> = (e: T) => void — no e.next().
+// Handlers auto-proceed after returning; throw to block.
 
 // ── Hook: impede que usuário não-admin altere o campo role ──────────────────────
-$app.onRecordBeforeUpdateRequest().add((e) => {
-    if (e.collection.name !== "users") { e.next(); return; }
+$app.onRecordBeforeUpdateRequest().add(function(e) {
+    if (e.collection.name !== "users") return;
 
     const authRole = e.auth ? e.auth.get("role") : null;
-    if (authRole === "admin") { e.next(); return; }
+    if (authRole === "admin") return;
 
     const data = (e.requestInfo && e.requestInfo.data) ? e.requestInfo.data : {};
     if (Object.prototype.hasOwnProperty.call(data, "role")) {
-        throw new Error("403: Alteração de role não autorizada");
+        throw new BadRequestError("Alteração de role não autorizada");
     }
-    e.next();
 })
 
 // ── Hook: impede que usuário edite registro de outro usuário ────────────────────
-$app.onRecordBeforeUpdateRequest().add((e) => {
-    if (e.collection.name !== "users") { e.next(); return; }
+$app.onRecordBeforeUpdateRequest().add(function(e) {
+    if (e.collection.name !== "users") return;
 
     const authRole = e.auth ? e.auth.get("role") : null;
-    if (authRole === "admin") { e.next(); return; }
+    if (authRole === "admin") return;
 
     const authId = e.auth ? e.auth.id : null;
     const recordId = e.record ? e.record.id : null;
     if (authId && recordId && authId !== recordId) {
-        throw new Error("403: Edição de perfil de outro usuário não autorizada");
+        throw new ForbiddenError("Edição de perfil de outro usuário não autorizada");
     }
-    e.next();
 })
 
 // ── Hook: impede votos duplicados em pesquisas ──────────────────────────────────
-$app.onRecordBeforeCreateRequest().add((e) => {
-    if (e.collection.name !== "poll_votes") { e.next(); return; }
+$app.onRecordBeforeCreateRequest().add(function(e) {
+    if (e.collection.name !== "poll_votes") return;
 
     const userId = e.auth ? e.auth.id : null;
     const data   = (e.requestInfo && e.requestInfo.data) ? e.requestInfo.data : {};
     const pollId = data["poll"];
 
-    if (!userId || !pollId) { e.next(); return; }
+    if (!userId || !pollId) return;
 
     let alreadyVoted = false;
     try {
@@ -61,20 +65,19 @@ $app.onRecordBeforeCreateRequest().add((e) => {
     }
 
     if (alreadyVoted) {
-        throw new Error("400: Você já votou nesta pesquisa");
+        throw new BadRequestError("Você já votou nesta pesquisa");
     }
-    e.next();
 })
 
 // ── Hook: impede training_completion duplicada ──────────────────────────────────
-$app.onRecordBeforeCreateRequest().add((e) => {
-    if (e.collection.name !== "training_completions") { e.next(); return; }
+$app.onRecordBeforeCreateRequest().add(function(e) {
+    if (e.collection.name !== "training_completions") return;
 
     const userId     = e.auth ? e.auth.id : null;
     const data       = (e.requestInfo && e.requestInfo.data) ? e.requestInfo.data : {};
     const trainingId = data["training"];
 
-    if (!userId || !trainingId) { e.next(); return; }
+    if (!userId || !trainingId) return;
 
     let alreadyDone = false;
     try {
@@ -85,7 +88,6 @@ $app.onRecordBeforeCreateRequest().add((e) => {
     } catch (_) {}
 
     if (alreadyDone) {
-        throw new Error("400: Treinamento já concluído");
+        throw new BadRequestError("Treinamento já concluído");
     }
-    e.next();
 })

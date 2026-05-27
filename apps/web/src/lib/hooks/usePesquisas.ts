@@ -31,7 +31,7 @@ export function usePolls() {
         if (counts[v.poll]) counts[v.poll][v.option_idx] = (counts[v.poll][v.option_idx] || 0) + 1;
       });
       setVoteCounts(counts);
-    } catch { setPolls([]); }
+    } catch (e) { console.error("[usePesquisas] fetchAll:", e); }
     finally { setLoading(false); }
   }, []);
 

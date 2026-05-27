@@ -15,6 +15,7 @@ import { RichTextContent } from "@/components/ui/RichTextContent";
 import {
   Plus, Loader2, Search, BookMarked, X, Pencil, Trash2, ChevronDown, ChevronUp,
 } from "lucide-react";
+import Link from "next/link";
 import getPocketBase from "@/lib/pocketbase";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -56,9 +57,10 @@ function ArticleCard({ article, canManage, onEdit, onDelete, index }: {
               <span key={t} className="text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">#{t.trim()}</span>
             ))}
           </div>
-          <h3 className="font-semibold text-sm cursor-pointer hover:text-primary transition-colors" onClick={() => setExpanded(!expanded)}>
+          <Link href={`/wiki/${article.id}`} prefetch={false}
+            className="font-semibold text-sm hover:text-primary transition-colors">
             {article.title}
-          </h3>
+          </Link>
         </div>
         {canManage && (
           <div className="flex items-center gap-1 shrink-0">
@@ -76,9 +78,11 @@ function ArticleCard({ article, canManage, onEdit, onDelete, index }: {
         <RichTextContent html={article.content} className="line-clamp-2 text-muted-foreground" />
       )}
 
-      <button onClick={() => setExpanded(!expanded)} className="text-xs text-primary hover:underline flex items-center gap-1">
-        {expanded ? <><ChevronUp style={{ width: 12, height: 12 }} />Recolher</> : <><ChevronDown style={{ width: 12, height: 12 }} />Ler artigo</>}
-      </button>
+      <div className="flex items-center gap-3">
+        <button onClick={() => setExpanded(!expanded)} className="text-xs text-primary hover:underline flex items-center gap-1">
+          {expanded ? <><ChevronUp style={{ width: 12, height: 12 }} />Recolher</> : <><ChevronDown style={{ width: 12, height: 12 }} />Ler artigo</>}
+        </button>
+      </div>
 
       {expanded && (
         <div className="bg-muted/30 rounded-xl p-4 border border-border/50">
@@ -110,8 +114,13 @@ function ArticleModal({ article, onSubmit, onClose }: {
   async function submit() {
     if (!title.trim() || !content.trim()) return;
     setLoading(true);
-    try { await onSubmit({ title, content, category, tags }); onClose(); }
-    finally { setLoading(false); }
+    try {
+      await onSubmit({ title, content, category, tags });
+      onClose();
+    } catch (err) {
+      console.error("[ArticleModal] submit failed:", err);
+      toast.error("Erro ao salvar artigo.");
+    } finally { setLoading(false); }
   }
 
   return (

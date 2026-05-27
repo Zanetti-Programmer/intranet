@@ -1,7 +1,7 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { DashboardLayout } from "../layout-dashboard";
@@ -172,8 +172,11 @@ export default function PesquisasPage() {
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<"ativa" | "encerrada" | "all">("ativa");
 
-  const myRole = (getPocketBase().authStore.record as { role?: string })?.role;
-  const canCreate = myRole === "admin" || myRole === "rh";
+  const [canCreate, setCanCreate] = useState(false);
+  useEffect(() => {
+    const role = (getPocketBase().authStore.record as { role?: string })?.role;
+    setCanCreate(role === "admin" || role === "rh");
+  }, []);
 
   const filtered = useMemo(() =>
     filter === "all" ? polls : polls.filter((p) => p.status === filter),

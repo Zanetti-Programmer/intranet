@@ -1,6 +1,5 @@
 "use client";
-import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { PostComposer } from "@/components/feed/PostComposer";
 import { PostCard } from "@/components/feed/PostCard";
 import { AnnouncementsWidget } from "@/components/feed/AnnouncementsWidget";
@@ -18,12 +17,21 @@ import { Loader2 } from "lucide-react";
 import type { Post } from "@/types";
 import getPocketBase from "@/lib/pocketbase";
 
+// Reads space filter from URL without useSearchParams() to avoid Suspense dependency
+function useSpaceFilter(): string | null {
+  const [spaceFilter, setSpaceFilter] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setSpaceFilter(params.get("space"));
+  }, []);
+  return spaceFilter;
+}
+
 function FeedInner() {
-  const searchParams = useSearchParams();
-  const spaceFilter = searchParams?.get("space") ?? null;
+  const spaceFilter = useSpaceFilter();
 
   const { spaces } = useSpaces();
-  const { posts, loading, hasMore, loadMore, createPost, deletePost } = usePosts(spaceFilter);
+  const { posts, loading, hasMore, loadMore, createPost, deletePost, updatePost } = usePosts(spaceFilter);
   const { announcements } = useAnnouncements();
 
   // Posts with images for "From The Blog"
@@ -84,6 +92,7 @@ function FeedInner() {
                     post={post}
                     space={spaces.find((s) => s.id === post.space)}
                     onDelete={deletePost}
+                    onUpdate={updatePost}
                   />
                 ))}
               </div>
@@ -133,13 +142,5 @@ function FeedInner() {
 }
 
 export function FeedContent() {
-  return (
-    <Suspense fallback={
-      <div className="flex justify-center items-center h-full">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-      </div>
-    }>
-      <FeedInner />
-    </Suspense>
-  );
+  return <FeedInner />;
 }
