@@ -1,7 +1,7 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { DashboardLayout } from "../layout-dashboard";
@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { RichTextContent } from "@/components/ui/RichTextContent";
 import { Plus, Loader2, Search, BookOpen, X, Image as ImageIcon, Trash2, Eye, Pencil, Check, ExternalLink, Heart, MessageCircle, Share2 } from "lucide-react";
+import { useBlogLike } from "./useBlogLike";
 import getPocketBase from "@/lib/pocketbase";
 import { cn, pbFileUrl } from "@/lib/utils";
 import { toast } from "sonner";
@@ -29,47 +30,23 @@ function formatDate(d: string) {
   });
 }
 
-// ── Inline like hook for articles ─────────────────────────────────────────────
-function useBlogLike(articleId: string) {
-  const [liked, setLiked] = useState(false);
-  const [count, setCount] = useState(0);
-  const pendingRef = useRef(false);
-  const myId = getPocketBase().authStore.record?.id ?? "";
 
-  useEffect(() => {
-    const pb = getPocketBase();
-    if (!pb.authStore.isValid) return;
-    pb.collection("post_reactions")
-      .getFullList({ filter: `post = "${articleId}" && emoji = "❤️"` })
-      .then((r) => { setCount(r.length); setLiked(r.some((rx) => rx.user === myId)); })
-      .catch(() => {});
-  }, [articleId, myId]);
-
-  const toggle = useCallback(async () => {
-    if (pendingRef.current) return;
-    pendingRef.current = true;
-    try {
-      const pb = getPocketBase();
-      if (liked) {
-        const ex = await pb.collection("post_reactions")
-          .getFirstListItem(`post = "${articleId}" && user = "${myId}" && emoji = "❤️"`);
-        await pb.collection("post_reactions").delete(ex.id);
-        setLiked(false); setCount((c) => c - 1);
-      } else {
-        await pb.collection("post_reactions").create({ post: articleId, user: myId, emoji: "❤️" });
-        setLiked(true); setCount((c) => c + 1);
-      }
-    } finally { pendingRef.current = false; }
-  }, [articleId, myId, liked]);
-
-  return { liked, count, toggle };
-}
+const WEATHER_CACHE_KEY = "weather-cache";
+const WEATHER_TTL = 30 * 60 * 1000; // 30 min — evita 1 req por usuário por abertura
 
 // ── Weather widget ─────────────────────────────────────────────────────────────
 function WeatherWidget() {
   const [weather, setWeather] = useState<{ temp: string; desc: string; emoji: string } | null>(null);
 
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem(WEATHER_CACHE_KEY);
+      if (raw) {
+        const { data, ts } = JSON.parse(raw);
+        if (Date.now() - ts < WEATHER_TTL) { setWeather(data); return; }
+      }
+    } catch {}
+
     fetch("https://wttr.in/?format=j1")
       .then((r) => r.json())
       .then((data) => {
@@ -82,7 +59,9 @@ function WeatherWidget() {
         else if (code <= 260) emoji = "🌧️";
         else if (code <= 350) emoji = "🌧️";
         else if (code <= 395) emoji = "❄️";
-        setWeather({ temp: c.temp_C, desc: c.weatherDesc[0].value, emoji });
+        const w = { temp: c.temp_C, desc: c.weatherDesc[0].value, emoji };
+        setWeather(w);
+        try { localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify({ data: w, ts: Date.now() })); } catch {}
       })
       .catch(() => {});
   }, []);
@@ -166,7 +145,7 @@ function BlogCard({ article, canManage, onDelete, onPublish, onUpdate, index }: 
   article: Article; canManage: boolean; index: number;
   onDelete: (id: string) => void;
   onPublish: (id: string) => void;
-  onUpdate: (id: string, data: { title: string; content: string; tags: string; status: string }) => Promise<void>;
+  onUpdate: (id: string, data: { title: string; content: string; tags: string; status: "published" | "draft" }) => Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -179,10 +158,13 @@ function BlogCard({ article, canManage, onDelete, onPublish, onUpdate, index }: 
   const { liked, count: likeCount, toggle: toggleLike } = useBlogLike(article.id);
   const author = article.expand?.author;
   const coverUrl = article.cover ? pbFileUrl("articles", article.id, article.cover, "600x300") : null;
+  const pb = getPocketBase();
+  const myId = pb.authStore.record?.id;
+  const myRole = (pb.authStore.record as { role?: string })?.role;
+  // Delete: only own article or admin (matches backend deleteRule)
+  const canDelete = article.author === myId || myRole === "admin";
+  const excerpt = article.content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 180);
   const isHtml = /<[a-z][\s\S]*>/i.test(article.content);
-  const excerpt = isHtml
-    ? article.content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 180)
-    : article.content.slice(0, 180);
 
   async function handleSave() {
     if (!editTitle.trim()) return;
@@ -207,22 +189,26 @@ function BlogCard({ article, canManage, onDelete, onPublish, onUpdate, index }: 
       {coverUrl && !editing && (
         <div className="relative h-48 cursor-pointer" onClick={() => router.push(`/blog/${article.id}`)}>
           <img src={coverUrl} alt={article.title} className="w-full h-full object-cover" />
-          {canManage && (
+          {(canManage || canDelete) && (
             <div className="absolute top-2 right-2 flex gap-1" onClick={(e) => e.stopPropagation()}>
-              {article.status === "draft" && (
+              {canManage && article.status === "draft" && (
                 <button onClick={() => onPublish(article.id)}
                   className="w-7 h-7 flex items-center justify-center rounded-lg bg-black/60 text-white hover:bg-emerald-500 transition-colors">
                   <Eye style={{ width: 13, height: 13 }} />
                 </button>
               )}
-              <button onClick={() => { setEditing(true); setEditTitle(article.title); setEditContent(article.content); setEditTags(article.tags ?? ""); }}
-                className="w-7 h-7 flex items-center justify-center rounded-lg bg-black/60 text-white hover:bg-primary transition-colors">
-                <Pencil style={{ width: 13, height: 13 }} />
-              </button>
-              <button onClick={() => onDelete(article.id)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg bg-black/60 text-white hover:bg-red-600 transition-colors">
-                <Trash2 style={{ width: 13, height: 13 }} />
-              </button>
+              {canManage && (
+                <button onClick={() => { setEditing(true); setEditTitle(article.title); setEditContent(article.content); setEditTags(article.tags ?? ""); }}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-black/60 text-white hover:bg-primary transition-colors">
+                  <Pencil style={{ width: 13, height: 13 }} />
+                </button>
+              )}
+              {canDelete && (
+                <button onClick={() => onDelete(article.id)}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-black/60 text-white hover:bg-red-600 transition-colors">
+                  <Trash2 style={{ width: 13, height: 13 }} />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -240,22 +226,26 @@ function BlogCard({ article, canManage, onDelete, onPublish, onUpdate, index }: 
                 <span key={t} className="text-[11px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full">#{t}</span>
               ))}
             </div>
-            {canManage && !editing && (
+            {(canManage || canDelete) && !editing && (
               <div className="flex items-center gap-1 shrink-0">
-                {article.status === "draft" && (
+                {canManage && article.status === "draft" && (
                   <button onClick={() => onPublish(article.id)} title="Publicar"
                     className="w-7 h-7 flex items-center justify-center rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors">
                     <Eye style={{ width: 13, height: 13 }} />
                   </button>
                 )}
-                <button onClick={() => { setEditing(true); setEditTitle(article.title); setEditContent(article.content); setEditTags(article.tags ?? ""); }}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-primary transition-colors">
-                  <Pencil style={{ width: 13, height: 13 }} />
-                </button>
-                <button onClick={() => onDelete(article.id)}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-red-400 transition-colors">
-                  <Trash2 style={{ width: 13, height: 13 }} />
-                </button>
+                {canManage && (
+                  <button onClick={() => { setEditing(true); setEditTitle(article.title); setEditContent(article.content); setEditTags(article.tags ?? ""); }}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-primary transition-colors">
+                    <Pencil style={{ width: 13, height: 13 }} />
+                  </button>
+                )}
+                {canDelete && (
+                  <button onClick={() => onDelete(article.id)}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-red-400 transition-colors">
+                    <Trash2 style={{ width: 13, height: 13 }} />
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -365,7 +355,10 @@ function BlogCard({ article, canManage, onDelete, onPublish, onUpdate, index }: 
 }
 
 // ── New Blog Modal ─────────────────────────────────────────────────────────────
-function NewBlogModal({ onSubmit, onClose }: { onSubmit: (d: any) => Promise<void>; onClose: () => void }) {
+function NewBlogModal({ onSubmit, onClose }: {
+  onSubmit: (d: { title: string; content: string; tags: string; status: string; coverFile?: File }) => Promise<void>;
+  onClose: () => void;
+}) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [tags, setTags] = useState("");
@@ -374,10 +367,12 @@ function NewBlogModal({ onSubmit, onClose }: { onSubmit: (d: any) => Promise<voi
   const [loading, setLoading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const contentText = content.replace(/<[^>]+>/g, "").trim();
+
   async function submit() {
-    if (!title.trim() || !content.trim()) return;
+    if (!title.trim() || !contentText) return;
     setLoading(true);
-    try { await onSubmit({ title, content, tags, status, coverFile }); onClose(); }
+    try { await onSubmit({ title, content, tags, status, coverFile: coverFile ?? undefined }); onClose(); }
     finally { setLoading(false); }
   }
 
@@ -417,7 +412,7 @@ function NewBlogModal({ onSubmit, onClose }: { onSubmit: (d: any) => Promise<voi
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={onClose} className="flex-1 h-9">Cancelar</Button>
-          <Button onClick={() => void submit()} disabled={!title.trim() || !content.trim() || loading} className="flex-1 h-9">
+          <Button onClick={() => void submit()} disabled={!title.trim() || !contentText || loading} className="flex-1 h-9">
             {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Publicar ✍️"}
           </Button>
         </div>

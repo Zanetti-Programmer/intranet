@@ -9,9 +9,10 @@ import { RichTextContent } from "@/components/ui/RichTextContent";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { CommentSection } from "@/components/feed/CommentSection";
 import { WhoIsOnlineCard } from "@/components/widgets/WhoIsOnlineCard";
+import { useBlogLike } from "@/app/blog/useBlogLike";
 import getPocketBase from "@/lib/pocketbase";
 import { pbFileUrl } from "@/lib/utils";
-import { ArrowLeft, Loader2, MessageCircle, Heart, Share2, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, MessageCircle, Heart, Share2, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import type { Article } from "@/types";
 
@@ -25,12 +26,12 @@ export default function BlogPostPage() {
   const [loading, setLoading] = useState(true);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const myId = getPocketBase().authStore.record?.id ?? "";
   const myRole = (getPocketBase().authStore.record as { role?: string })?.role;
-  const canDelete = myRole === "admin" || myRole === "rh" || myRole === "ti";
+
+  const { liked, count: likeCount, toggle: toggleLike } = useBlogLike(id);
 
   useEffect(() => {
     if (!id) return;
@@ -44,28 +45,7 @@ export default function BlogPostPage() {
     pb.collection("post_comments").getList(1, 1, { filter: `post = "${id}"` })
       .then((r) => setCommentCount(r.totalItems))
       .catch(() => {});
-
-    pb.collection("post_reactions").getFullList({ filter: `post = "${id}" && emoji = "❤️"` })
-      .then((r) => {
-        setLikeCount(r.length);
-        setLiked(r.some((rx) => rx.user === myId));
-      }).catch(() => {});
-  }, [id, myId, router]);
-
-  async function handleLike() {
-    try {
-      const pb = getPocketBase();
-      if (liked) {
-        const existing = await pb.collection("post_reactions")
-          .getFirstListItem(`post = "${id}" && user = "${myId}" && emoji = "❤️"`);
-        await pb.collection("post_reactions").delete(existing.id);
-        setLiked(false); setLikeCount((c) => c - 1);
-      } else {
-        await pb.collection("post_reactions").create({ post: id, user: myId, emoji: "❤️" });
-        setLiked(true); setLikeCount((c) => c + 1);
-      }
-    } catch { /* ignore */ }
-  }
+  }, [id, router]);
 
   function handleShare() {
     navigator.clipboard.writeText(window.location.href)
@@ -73,7 +53,7 @@ export default function BlogPostPage() {
   }
 
   async function handleDelete() {
-    if (!article || !confirm("Excluir este post?")) return;
+    if (!article) return;
     try {
       await getPocketBase().collection("articles").delete(article.id);
       toast.success("Post removido.");
@@ -91,6 +71,8 @@ export default function BlogPostPage() {
 
   if (!article) return null;
 
+  // Delete: own article or admin (mirrors backend deleteRule)
+  const canDelete = article.author === myId || myRole === "admin";
   const author = article.expand?.author;
   const coverUrl = article.cover ? pbFileUrl("articles", article.id, article.cover, "1200x500") : null;
   const isHtml = /<[a-z][\s\S]*>/i.test(article.content);
@@ -131,11 +113,31 @@ export default function BlogPostPage() {
                       <p className="text-xs text-muted-foreground capitalize">{pubDate}</p>
                     </div>
                   </div>
-                  {canDelete && (
-                    <button onClick={() => void handleDelete()}
-                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-red-400 transition-colors">
+                  {canDelete && !confirmDelete && (
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-red-400 transition-colors"
+                    >
                       <Trash2 style={{ width: 13, height: 13 }} /> Excluir
                     </button>
+                  )}
+                  {canDelete && confirmDelete && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <AlertTriangle style={{ width: 13, height: 13 }} className="text-amber-400" />
+                      <span className="text-muted-foreground">Confirmar exclusão?</span>
+                      <button
+                        onClick={() => void handleDelete()}
+                        className="px-2 py-1 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors font-medium"
+                      >
+                        Excluir
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(false)}
+                        className="px-2 py-1 rounded-md bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -151,7 +153,7 @@ export default function BlogPostPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-5">
-                  <button onClick={() => void handleLike()}
+                  <button onClick={() => void toggleLike()}
                     className={`flex items-center gap-1.5 text-sm transition-colors ${liked ? "text-red-500" : "text-muted-foreground hover:text-foreground"}`}>
                     <Heart className={`w-4 h-4 ${liked ? "fill-red-500" : ""}`} strokeWidth={1.8} />
                     Curtir{likeCount > 0 ? ` ${likeCount}` : ""}

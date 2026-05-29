@@ -300,7 +300,7 @@ function NewArticleModal({ onSubmit, onClose }: {
 // ── Edit modal (inline) ───────────────────────────────────────────────────────
 function EditModal({ article, onSave, onClose }: {
   article: Article;
-  onSave: (id: string, data: { title: string; content: string; tags: string; status: string }) => Promise<void>;
+  onSave: (id: string, data: { title: string; content: string; tags: string; status: "published" | "draft" }) => Promise<void>;
   onClose: () => void;
 }) {
   const [title, setTitle] = useState(article.title);
