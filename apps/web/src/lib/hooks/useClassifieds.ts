@@ -54,5 +54,16 @@ export function useClassifieds(statusFilter?: string) {
     await getPocketBase().collection("marketplace_items").update(id, { status });
   }, []);
 
-  return { items, loading, createItem, updateStatus };
+  const updateItem = useCallback(async (id: string, data: {
+    title: string; description: string; price: number; category: string;
+  }) => {
+    await getPocketBase().collection("marketplace_items").update(id, data);
+  }, []);
+
+  const deleteItem = useCallback(async (id: string) => {
+    setItems((prev) => prev.filter((i) => i.id !== id));
+    await getPocketBase().collection("marketplace_items").delete(id);
+  }, []);
+
+  return { items, loading, createItem, updateStatus, updateItem, deleteItem };
 }
