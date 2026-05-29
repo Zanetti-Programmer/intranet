@@ -151,6 +151,7 @@ function BlogCard({ article, canManage, onDelete, onPublish, onUpdate, index }: 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
   const [editTitle, setEditTitle] = useState(article.title);
   const [editContent, setEditContent] = useState(article.content);
   const [editTags, setEditTags] = useState(article.tags ?? "");
@@ -165,6 +166,13 @@ function BlogCard({ article, canManage, onDelete, onPublish, onUpdate, index }: 
   const canDelete = article.author === myId || myRole === "admin";
   const excerpt = article.content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 180);
   const isHtml = /<[a-z][\s\S]*>/i.test(article.content);
+
+  useEffect(() => {
+    const pb = getPocketBase();
+    if (!pb.authStore.isValid) return;
+    pb.collection("post_comments").getList(1, 1, { filter: `post = "${article.id}"` })
+      .then((r) => setCommentCount(r.totalItems)).catch(() => {});
+  }, [article.id]);
 
   async function handleSave() {
     if (!editTitle.trim()) return;
@@ -329,7 +337,7 @@ function BlogCard({ article, canManage, onDelete, onPublish, onUpdate, index }: 
               <button onClick={() => setCommentsOpen((v) => !v)}
                 className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors",
                   commentsOpen ? "text-primary bg-primary/8" : "text-muted-foreground hover:text-foreground hover:bg-muted")}>
-                <MessageCircle style={{ width: 13, height: 13 }} /> Comentar
+                <MessageCircle style={{ width: 13, height: 13 }} /> Comentar{commentCount > 0 ? ` (${commentCount})` : ""}
               </button>
               <button onClick={handleShare}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
