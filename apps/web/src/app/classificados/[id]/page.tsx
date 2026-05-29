@@ -8,8 +8,11 @@ import { DashboardLayout } from "../../layout-dashboard";
 import { useChannels } from "@/lib/hooks/useChannels";
 import { pbFileUrl, formatDistanceToNow } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { UserAvatar } from "@/components/shared/UserAvatar";
-import { ArrowLeft, MessageSquare, Tag, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, MessageSquare, Tag, Loader2, ChevronLeft, ChevronRight, Pencil, X } from "lucide-react";
 import Image from "next/image";
 import type { MarketplaceItem } from "@/types";
 import { cn } from "@/lib/utils";
@@ -39,6 +42,15 @@ export default function ClassificadoDetailPage() {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [statusLoading, setStatusLoading] = useState(false);
 
+  // Edit modal
+  const [showEdit, setShowEdit] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editCondition, setEditCondition] = useState<"novo" | "usado" | "">("");
+  const [editLoading, setEditLoading] = useState(false);
+
   const { createDM } = useChannels();
   const myId = getPocketBase().authStore.record?.id;
 
@@ -51,7 +63,6 @@ export default function ClassificadoDetailPage() {
       .catch(() => router.replace("/classificados"))
       .finally(() => setLoading(false));
 
-    // Keep status / title in sync via realtime
     pb.collection("marketplace_items").subscribe(id, (e) => {
       if (e.action === "update") setItem((prev) => prev ? { ...prev, ...e.record } as MarketplaceItem : prev);
       if (e.action === "delete") router.replace("/classificados");
@@ -59,6 +70,37 @@ export default function ClassificadoDetailPage() {
 
     return () => { pb.collection("marketplace_items").unsubscribe(id).catch(() => {}); };
   }, [id, router]);
+
+  function openEdit() {
+    if (!item) return;
+    setEditTitle(item.title);
+    setEditDescription(item.description ?? "");
+    setEditPrice(item.price > 0 ? String(item.price) : "");
+    setEditCategory(item.category ?? "");
+    setEditCondition((item.condition ?? "") as "novo" | "usado" | "");
+    setShowEdit(true);
+  }
+
+  async function handleSaveEdit() {
+    if (!item || !editTitle.trim()) return;
+    setEditLoading(true);
+    try {
+      const updated = await getPocketBase().collection("marketplace_items").update(item.id, {
+        title: editTitle.trim(),
+        description: editDescription,
+        price: Number(editPrice) || 0,
+        category: editCategory,
+        condition: editCondition || null,
+      }, { expand: "author" });
+      setItem((prev) => prev ? { ...prev, ...updated } as MarketplaceItem : prev);
+      toast.success("Anúncio atualizado.");
+      setShowEdit(false);
+    } catch {
+      toast.error("Erro ao atualizar anúncio.");
+    } finally {
+      setEditLoading(false);
+    }
+  }
 
   async function handleContact() {
     if (!item) return;
@@ -142,12 +184,6 @@ export default function ClassificadoDetailPage() {
                       </div>
                     </>
                   )}
-                  {/* Thumbnails */}
-                  {images.length > 1 && (
-                    <div className="absolute bottom-0 right-0 p-2 flex gap-1">
-                      {/* dots already shown above */}
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="aspect-video bg-muted flex items-center justify-center">
@@ -155,7 +191,6 @@ export default function ClassificadoDetailPage() {
                 </div>
               )}
 
-              {/* Thumbnail strip */}
               {images.length > 1 && (
                 <div className="flex gap-2 p-3 overflow-x-auto">
                   {images.map((img, i) => (
@@ -225,34 +260,99 @@ export default function ClassificadoDetailPage() {
 
             {/* Owner controls */}
             {isOwn && (
-              <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Gerenciar anúncio</p>
-                <div className="flex gap-2 flex-wrap">
-                  {STATUS_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      disabled={statusLoading || item.status === opt.value}
-                      onClick={() => void handleStatusChange(opt.value)}
-                      className={cn(
-                        "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50",
-                        item.status === opt.value
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-muted text-muted-foreground border-border hover:text-foreground hover:border-foreground/20"
-                      )}
-                    >
-                      {statusLoading && item.status !== opt.value ? <Loader2 className="w-3 h-3 animate-spin inline mr-1" /> : null}
-                      {opt.label}
-                    </button>
-                  ))}
+              <div className="bg-card border border-border rounded-2xl p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Gerenciar anúncio</p>
+                  <Button variant="outline" size="sm" onClick={openEdit} className="gap-1.5 h-8 text-xs">
+                    <Pencil className="w-3.5 h-3.5" /> Editar anúncio
+                  </Button>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Para editar título, descrição ou preço, use o menu <strong>⋯</strong> na listagem.
-                </p>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Status</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {STATUS_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        disabled={statusLoading || item.status === opt.value}
+                        onClick={() => void handleStatusChange(opt.value)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50",
+                          item.status === opt.value
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-muted text-muted-foreground border-border hover:text-foreground hover:border-foreground/20"
+                        )}
+                      >
+                        {statusLoading && item.status !== opt.value ? <Loader2 className="w-3 h-3 animate-spin inline mr-1" /> : null}
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </div>
         ) : null}
       </div>
+
+      {/* Edit modal */}
+      <AnimatePresence>
+        {showEdit && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowEdit(false)}>
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-card border border-border rounded-2xl p-5 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold">Editar anúncio</h3>
+                <button onClick={() => setShowEdit(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs">Título *</Label>
+                  <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="mt-1 h-9" autoFocus />
+                </div>
+                <div>
+                  <Label className="text-xs">Descrição</Label>
+                  <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className="mt-1 resize-none min-h-[80px]" rows={3} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Preço (R$)</Label>
+                    <Input type="number" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} placeholder="0,00" className="mt-1 h-9" min={0} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Categoria</Label>
+                    <Input value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="mt-1 h-9" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs mb-1.5 block">Condição</Label>
+                  <div className="flex gap-2">
+                    {(["novo", "usado"] as const).map((c) => (
+                      <button key={c} type="button" onClick={() => setEditCondition(editCondition === c ? "" : c)}
+                        className={cn("px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                          editCondition === c ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-border hover:text-foreground")}>
+                        {c === "novo" ? "Novo" : "Usado"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-5">
+                <Button variant="outline" onClick={() => setShowEdit(false)} className="flex-1 h-9">Cancelar</Button>
+                <Button onClick={() => void handleSaveEdit()} disabled={!editTitle.trim() || editLoading} className="flex-1 h-9">
+                  {editLoading ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />Salvando...</> : "Salvar"}
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }
