@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# apps/web — Frontend Next.js
 
-## Getting Started
+Frontend da intranet corporativa. Veja o `README.md` e `CLAUDE.md` na raiz do projeto para contexto completo.
 
-First, run the development server:
+## Desenvolvimento local
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Requer PocketBase rodando em `http://localhost:8090` (ou via Docker Compose).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+NEXT_PUBLIC_PB_URL=http://localhost:8090
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Build de produção
 
-## Learn More
+```bash
+npm run build
+npm run start
+```
 
-To learn more about Next.js, take a look at the following resources:
+Em produção, use sempre o Docker Compose da raiz — o `Dockerfile` aqui é chamado pelo `docker-compose.yml`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Estrutura principal
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/                  ← 34 rotas (Next.js App Router)
+├── components/
+│   ├── layout/           ← Sidebar, Topbar
+│   ├── feed/             ← PostCard, CommentSection, FromTheBlogCard
+│   ├── search/           ← GlobalSearch (modal Cmd+K)
+│   ├── shared/           ← UserAvatar
+│   └── ui/               ← shadcn/ui + RichTextEditor + RichTextContent
+├── lib/
+│   ├── hooks/            ← um hook por domínio de negócio
+│   ├── pocketbase.ts     ← singleton getPocketBase()
+│   └── utils.ts          ← cn(), pbFileUrl(), formatDistanceToNow()
+└── types/index.ts        ← interfaces TypeScript
+```
 
-## Deploy on Vercel
+## Dependências principais
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Pacote | Uso |
+|---|---|
+| `next` 16 | framework |
+| `@tiptap/react` ^2 | editor rich text (blog, notícias, wiki) |
+| `dompurify` ^3 | sanitização de HTML antes de renderizar |
+| `framer-motion` | animações |
+| `lucide-react` | ícones |
+| `sonner` | toasts de feedback |
+| `@pocketbase/js` | cliente PocketBase |
