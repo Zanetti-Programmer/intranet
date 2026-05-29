@@ -53,6 +53,7 @@ export default function ClassificadosPage() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
+  const [condition, setCondition] = useState<"novo" | "usado" | "">("");
   const [photos, setPhotos] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [formLoading, setFormLoading] = useState(false);
@@ -63,6 +64,7 @@ export default function ClassificadosPage() {
   const [editDescription, setEditDescription] = useState("");
   const [editPrice, setEditPrice] = useState("");
   const [editCategory, setEditCategory] = useState("");
+  const [editCondition, setEditCondition] = useState<"novo" | "usado" | "">("");
   const [editLoading, setEditLoading] = useState(false);
 
   // Per-card menu
@@ -85,6 +87,7 @@ export default function ClassificadosPage() {
     setEditDescription(item.description ?? "");
     setEditPrice(item.price > 0 ? String(item.price) : "");
     setEditCategory(item.category ?? "");
+    setEditCondition((item.condition ?? "") as "novo" | "usado" | "");
     setMenuOpenId(null);
   }
 
@@ -97,6 +100,7 @@ export default function ClassificadosPage() {
         description: editDescription,
         price: Number(editPrice) || 0,
         category: editCategory,
+        condition: editCondition || undefined,
       });
       toast.success("Item atualizado.");
       setEditingItem(null);
@@ -143,8 +147,8 @@ export default function ClassificadosPage() {
     if (!title.trim()) return;
     setFormLoading(true);
     try {
-      await createItem({ title, description, price: Number(price) || 0, category, contact_dm: true, photos: photos.length ? photos : undefined });
-      setTitle(""); setDescription(""); setPrice(""); setCategory(""); setPhotos([]); setPreviews([]);
+      await createItem({ title, description, price: Number(price) || 0, category, condition: condition || undefined, contact_dm: true, photos: photos.length ? photos : undefined });
+      setTitle(""); setDescription(""); setPrice(""); setCategory(""); setCondition(""); setPhotos([]); setPreviews([]);
       setShowForm(false);
       toast.success("Item publicado.");
     } catch {
@@ -152,7 +156,8 @@ export default function ClassificadosPage() {
     } finally { setFormLoading(false); }
   }
 
-  async function handleContact(authorId: string) {
+  async function handleContact(e: React.MouseEvent, authorId: string) {
+    e.stopPropagation();
     const channelId = await createDM(authorId);
     router.push(`/chat/${channelId}`);
   }
@@ -192,9 +197,16 @@ export default function ClassificadosPage() {
               const isOwn = item.author === myId;
               const isMenuOpen = menuOpenId === item.id;
               return (
-                <motion.div key={item.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                  className="bg-card border border-border rounded-xl overflow-hidden hover:border-primary/30 transition-colors">
-                  <div className="aspect-video bg-muted relative">
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  onClick={() => router.push(`/classificados/${item.id}`)}
+                  className="bg-card border border-border rounded-xl cursor-pointer hover:border-primary/30 transition-colors"
+                >
+                  {/* Image — overflow-hidden applied here, not on the card, so the menu isn't clipped */}
+                  <div className="aspect-video bg-muted relative rounded-t-xl overflow-hidden">
                     {mainPhoto ? (
                       <Image src={pbFileUrl("marketplace_items", item.id, mainPhoto, "600x340")} alt={item.title}
                         fill className="object-cover" unoptimized />
@@ -203,10 +215,18 @@ export default function ClassificadosPage() {
                         <Tag className="w-10 h-10 text-muted-foreground/20" />
                       </div>
                     )}
-                    <span className={cn("absolute top-2 left-2 text-[10px] px-1.5 py-0.5 rounded-full border font-medium", st.class)}>
-                      {st.label}
-                    </span>
+                    <div className="absolute top-2 left-2 flex gap-1">
+                      <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full border font-medium", st.class)}>
+                        {st.label}
+                      </span>
+                      {item.condition && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full border font-medium bg-black/40 text-white border-white/20">
+                          {item.condition === "novo" ? "Novo" : "Usado"}
+                        </span>
+                      )}
+                    </div>
                   </div>
+
                   <div className="p-3 space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-semibold text-sm line-clamp-1 flex-1">{item.title}</h3>
@@ -217,7 +237,11 @@ export default function ClassificadosPage() {
                           </span>
                         )}
                         {isOwn && (
-                          <div className="relative" ref={isMenuOpen ? menuRef : undefined}>
+                          <div
+                            className="relative"
+                            ref={isMenuOpen ? menuRef : undefined}
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <button
                               aria-label="Abrir menu do item"
                               onClick={() => setMenuOpenId(isMenuOpen ? null : item.id)}
@@ -232,7 +256,7 @@ export default function ClassificadosPage() {
                                   animate={{ opacity: 1, scale: 1, y: 0 }}
                                   exit={{ opacity: 0, scale: 0.95, y: -4 }}
                                   transition={{ duration: 0.1 }}
-                                  className="absolute right-0 top-7 z-20 bg-card border border-border rounded-xl shadow-xl py-1 min-w-[160px]"
+                                  className="absolute right-0 top-7 z-30 bg-card border border-border rounded-xl shadow-xl py-1 min-w-[160px]"
                                 >
                                   <button
                                     onClick={() => openEdit(item)}
@@ -251,8 +275,7 @@ export default function ClassificadosPage() {
                                         item.status === opt.value && "font-semibold text-primary"
                                       )}
                                     >
-                                      {item.status === opt.value && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
-                                      {item.status !== opt.value && <span className="w-1.5 h-1.5" />}
+                                      <span className={cn("w-1.5 h-1.5 rounded-full", item.status === opt.value ? "bg-primary" : "bg-transparent")} />
                                       {opt.label}
                                     </button>
                                   ))}
@@ -278,8 +301,10 @@ export default function ClassificadosPage() {
                         <span>· {formatDistanceToNow(item.created)}</span>
                       </div>
                       {!isOwn && item.status === "disponivel" && (
-                        <button onClick={() => void handleContact(item.author)}
-                          className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors">
+                        <button
+                          onClick={(e) => void handleContact(e, item.author)}
+                          className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+                        >
                           <MessageSquare className="w-3.5 h-3.5" /> Contatar
                         </button>
                       )}
@@ -320,6 +345,18 @@ export default function ClassificadosPage() {
                   <div>
                     <Label className="text-xs">Categoria</Label>
                     <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ex: Móveis, Tech" className="mt-1 h-9" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs mb-1.5 block">Condição</Label>
+                  <div className="flex gap-2">
+                    {(["novo", "usado"] as const).map((c) => (
+                      <button key={c} type="button" onClick={() => setCondition(condition === c ? "" : c)}
+                        className={cn("px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                          condition === c ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-border hover:text-foreground")}>
+                        {c === "novo" ? "Novo" : "Usado"}
+                      </button>
+                    ))}
                   </div>
                 </div>
                 <div>
@@ -381,6 +418,18 @@ export default function ClassificadosPage() {
                   <div>
                     <Label className="text-xs">Categoria</Label>
                     <Input value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="mt-1 h-9" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs mb-1.5 block">Condição</Label>
+                  <div className="flex gap-2">
+                    {(["novo", "usado"] as const).map((c) => (
+                      <button key={c} type="button" onClick={() => setEditCondition(editCondition === c ? "" : c)}
+                        className={cn("px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                          editCondition === c ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-border hover:text-foreground")}>
+                        {c === "novo" ? "Novo" : "Usado"}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>

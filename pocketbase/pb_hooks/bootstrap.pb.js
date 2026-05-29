@@ -414,6 +414,7 @@ function createMarketplaceItems() {
     col.schema.addField(new SchemaField({ name:"photos", type:"file", options:{maxSelect:5,maxSize:10485760,mimeTypes:["image/jpeg","image/png","image/webp"]} }))
     col.schema.addField(new SchemaField({ name:"author", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
     col.schema.addField(new SchemaField({ name:"status", type:"select", options:{maxSelect:1,values:["disponivel","reservado","vendido"]} }))
+    col.schema.addField(new SchemaField({ name:"condition", type:"select", options:{maxSelect:1,values:["novo","usado"]} }))
     col.schema.addField(new SchemaField({ name:"category", type:"text" }))
     col.schema.addField(new SchemaField({ name:"contact_dm", type:"bool" }))
     $app.dao().saveCollection(col)

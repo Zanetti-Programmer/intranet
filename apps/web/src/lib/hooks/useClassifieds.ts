@@ -34,7 +34,7 @@ export function useClassifieds(statusFilter?: string) {
 
   const createItem = useCallback(async (data: {
     title: string; description: string; price: number;
-    category: string; contact_dm: boolean; photos?: File[];
+    category: string; condition?: string; contact_dm: boolean; photos?: File[];
   }) => {
     const pb = getPocketBase();
     const formData = new FormData();
@@ -42,6 +42,7 @@ export function useClassifieds(statusFilter?: string) {
     formData.append("description", data.description);
     formData.append("price", String(data.price));
     formData.append("category", data.category);
+    if (data.condition) formData.append("condition", data.condition);
     formData.append("contact_dm", String(data.contact_dm));
     formData.append("status", "disponivel");
     formData.append("author", pb.authStore.record!.id);
@@ -55,7 +56,7 @@ export function useClassifieds(statusFilter?: string) {
   }, []);
 
   const updateItem = useCallback(async (id: string, data: {
-    title: string; description: string; price: number; category: string;
+    title: string; description: string; price: number; category: string; condition?: string;
   }) => {
     await getPocketBase().collection("marketplace_items").update(id, data);
   }, []);

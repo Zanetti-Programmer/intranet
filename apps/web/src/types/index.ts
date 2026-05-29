@@ -286,6 +286,7 @@ export interface MarketplaceItem {
   author: string;
   expand?: { author: User };
   status: "disponivel" | "vendido" | "reservado";
+  condition?: "novo" | "usado";
   category: string;
   contact_dm: boolean;
   created: string;
