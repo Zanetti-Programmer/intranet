@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import {
-  Menu, Search, MessageCircle, Bell, ChevronDown,
+  Search, MessageCircle, Bell, ChevronDown,
   LogOut, User as UserIcon, Sun, Moon, Globe,
 } from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -50,13 +50,6 @@ export function Topbar({ title: _title }: { title?: string }) {
       className="flex items-center h-[56px] border-b border-border bg-background shrink-0 z-20"
       style={{ paddingLeft: 0, paddingRight: 0 }}
     >
-      {/* ── Hamburger ─────────────────────── */}
-      <div className="flex items-center justify-center w-[52px] h-full border-r border-border shrink-0">
-        <button className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-          <Menu className="w-[18px] h-[18px]" strokeWidth={1.8} />
-        </button>
-      </div>
-
       {/* ── Search bar (opens modal) ─────────── */}
       <button onClick={() => setSearchOpen(true)}
         className="flex items-center gap-2 flex-1 px-4 max-w-sm text-left hover:bg-muted/40 rounded-lg mx-1 py-1.5 transition-colors">
