@@ -9,9 +9,10 @@ import { useArticles } from "@/lib/hooks/useArticles";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Plus, Loader2, Search, X, Image as ImageIcon, Trash2, Eye, Pencil, Check, Clock } from "lucide-react";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
+import { RichTextContent } from "@/components/ui/RichTextContent";
 import getPocketBase from "@/lib/pocketbase";
 import { cn, pbFileUrl } from "@/lib/utils";
 import { toast } from "sonner";
@@ -115,10 +116,7 @@ function MediumCard({ article, canManage, onDelete, onPublish, index }: {
   const author = article.expand?.author;
   const coverUrl = article.cover ? pbFileUrl("articles", article.id, article.cover, "600x300") : null;
   const tags = article.tags?.split(",").map((t) => t.trim()).filter(Boolean) ?? [];
-  const isHtml = /<[a-z][\s\S]*>/i.test(article.content);
-  const excerpt = isHtml
-    ? article.content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 120)
-    : article.content.slice(0, 120);
+  const excerpt = article.content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06 }}
@@ -179,10 +177,7 @@ function CompactItem({ article, canManage, onDelete, onPublish, index }: {
   const author = article.expand?.author;
   const coverUrl = article.cover ? pbFileUrl("articles", article.id, article.cover, "200x200") : null;
   const tags = article.tags?.split(",").map((t) => t.trim()).filter(Boolean) ?? [];
-  const isHtml = /<[a-z][\s\S]*>/i.test(article.content);
-  const excerpt = isHtml
-    ? article.content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 100)
-    : article.content.slice(0, 100);
+  const excerpt = article.content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 100);
 
   return (
     <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.04 }}
@@ -267,8 +262,7 @@ function NewArticleModal({ onSubmit, onClose }: {
           <Input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 h-9" autoFocus />
         </div>
         <div><Label className="text-xs">Conteúdo *</Label>
-          <Textarea value={content} onChange={(e) => setContent(e.target.value)}
-            placeholder="Escreva o conteúdo completo..." className="mt-1 resize-none min-h-[160px]" rows={7} />
+          <RichTextEditor value={content} onChange={setContent} placeholder="Escreva o conteúdo completo..." className="mt-1" minHeight={160} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div><Label className="text-xs">Tags (vírgula)</Label>
@@ -335,7 +329,7 @@ function EditModal({ article, onSave, onClose }: {
           <Input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 h-9" autoFocus />
         </div>
         <div><Label className="text-xs">Conteúdo *</Label>
-          <Textarea value={content} onChange={(e) => setContent(e.target.value)} className="mt-1 resize-none min-h-[160px]" rows={7} />
+          <RichTextEditor value={content} onChange={setContent} className="mt-1" minHeight={160} />
         </div>
         <div><Label className="text-xs">Tags (vírgula)</Label>
           <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="ex: rh, evento" className="mt-1 h-9" />

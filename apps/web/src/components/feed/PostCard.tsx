@@ -8,7 +8,7 @@ import { SpaceBadge } from "./SpaceBadge";
 import { formatDistanceToNow, pbFileUrl } from "@/lib/utils";
 import { Heart, MessageCircle, Star, Trash2, Share2, MoreHorizontal, Pencil, X, Check } from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { useReactions } from "@/lib/hooks/usePosts";
+import { useReactions, useStars } from "@/lib/hooks/usePosts";
 import getPocketBase from "@/lib/pocketbase";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -25,7 +25,7 @@ export function PostCard({ post, space, onDelete, onUpdate }: Props) {
   const { user } = useAuth();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
-  const [starred, setStarred] = useState(false);
+  const { starred, toggle: toggleStar } = useStars(post.id);
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
@@ -220,7 +220,7 @@ export function PostCard({ post, space, onDelete, onUpdate }: Props) {
           <span>Comentar{commentCount > 0 ? ` ${commentCount}` : ""}</span>
         </button>
 
-        <button onClick={() => setStarred((v) => !v)}
+        <button onClick={() => void toggleStar()}
           className={cn("flex items-center gap-1.5 text-[12px] transition-colors",
             starred ? "text-amber-400" : "text-muted-foreground hover:text-foreground")}>
           <Star className={cn("w-3.5 h-3.5", starred && "fill-amber-400 text-amber-400")} strokeWidth={1.8} />

@@ -22,6 +22,12 @@ function initials(name?: string) {
   return name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 }
 
+const LANGS = [
+  { code: "pt-BR", label: "Português (BR)", flag: "🇧🇷" },
+  { code: "en-US", label: "English (US)",   flag: "🇺🇸" },
+  { code: "es",    label: "Español",         flag: "🇪🇸" },
+];
+
 export function Topbar({ title: _title }: { title?: string }) {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -29,6 +35,30 @@ export function Topbar({ title: _title }: { title?: string }) {
   const { count, notifications, markAllRead } = useNotifications();
   const [notifOpen, setNotifOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const [lang, setLang] = useState("pt-BR");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("app-lang");
+    if (saved) setLang(saved);
+  }, []);
+
+  function selectLang(code: string) {
+    setLang(code);
+    localStorage.setItem("app-lang", code);
+    setLangOpen(false);
+  }
+
+  const currentLang = LANGS.find((l) => l.code === lang) ?? LANGS[0];
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-lang-menu]")) setLangOpen(false);
+    }
+    if (langOpen) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [langOpen]);
 
   useEffect(() => {
     function handler(e: KeyboardEvent) {
@@ -61,12 +91,35 @@ export function Topbar({ title: _title }: { title?: string }) {
       {/* ── Right side ──────────────────────── */}
       <div className="flex items-center gap-0.5 px-3 ml-auto">
 
-        {/* Language selector (estático, só visual) */}
-        <button className="hidden md:flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-          <Globe className="w-4 h-4" strokeWidth={1.8} />
-          <span className="font-medium">Português</span>
-          <ChevronDown className="w-3 h-3" />
-        </button>
+        {/* Language selector */}
+        <div className="relative hidden md:block" data-lang-menu>
+          <button
+            onClick={() => setLangOpen((v) => !v)}
+            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <Globe className="w-4 h-4" strokeWidth={1.8} />
+            <span className="font-medium">{currentLang.flag} {currentLang.label.split(" ")[0]}</span>
+            <ChevronDown className="w-3 h-3" />
+          </button>
+          {langOpen && (
+            <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-xl py-1 z-50 min-w-[170px]">
+              {LANGS.map((l) => (
+                <button
+                  key={l.code}
+                  onClick={() => selectLang(l.code)}
+                  className="flex items-center gap-2.5 w-full px-3 py-2 text-xs hover:bg-muted transition-colors"
+                >
+                  <span>{l.flag}</span>
+                  <span className={lang === l.code ? "font-semibold text-primary" : "text-muted-foreground"}>{l.label}</span>
+                  {lang === l.code && <span className="ml-auto text-primary">✓</span>}
+                </button>
+              ))}
+              <div className="px-3 py-1.5 border-t border-border/60 mt-1">
+                <p className="text-[10px] text-muted-foreground">Tradução completa em breve</p>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Theme */}
         <button

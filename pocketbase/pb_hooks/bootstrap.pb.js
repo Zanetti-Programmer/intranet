@@ -31,6 +31,7 @@ try {
             const postsId  = createPosts(spacesId)
             createReactions(postsId)
             createComments(postsId)
+            createStars(postsId)
             createAnnouncements(spacesId)
             seedDefaultSpaces()
         } catch (err) { console.error("[setup] Erro feed:", err) }
@@ -176,6 +177,16 @@ function createReactions(postsId) {
     col.schema.addField(new SchemaField({ name:"post", type:"text", required:true }))
     col.schema.addField(new SchemaField({ name:"user", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
     col.schema.addField(new SchemaField({ name:"emoji", type:"text", required:true }))
+    $app.dao().saveCollection(col)
+}
+function createStars(postsId) {
+    const usersId = $app.dao().findCollectionByNameOrId("users").id
+    const col = new Collection(); col.name = "post_stars"; col.type = "base"
+    col.listRule = "@request.auth.id != ''"; col.viewRule = col.listRule
+    col.createRule = "@request.auth.id != ''"
+    col.deleteRule = "@request.auth.id = user.id"
+    col.schema.addField(new SchemaField({ name:"post", type:"relation", required:true, options:{collectionId:postsId,maxSelect:1,cascadeDelete:true} }))
+    col.schema.addField(new SchemaField({ name:"user", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
     $app.dao().saveCollection(col)
 }
 function createComments(postsId) {

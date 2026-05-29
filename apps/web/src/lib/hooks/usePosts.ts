@@ -221,3 +221,42 @@ export function useComments(postId: string, enabled: boolean) {
 
   return { comments, loading, addComment };
 }
+
+// ── Stars (Favoritar) ─────────────────────────────────────────────────────────
+export function useStars(postId: string) {
+  const [starred, setStarred] = useState(false);
+  const [starId, setStarId] = useState<string | null>(null);
+  const pendingRef = useRef(false);
+
+  useEffect(() => {
+    const pb = getPocketBase();
+    if (!pb.authStore.isValid) return;
+    const userId = pb.authStore.record!.id;
+    pb.collection("post_stars")
+      .getFirstListItem(`post = "${postId}" && user = "${userId}"`)
+      .then((r) => { setStarred(true); setStarId(r.id); })
+      .catch(() => { setStarred(false); setStarId(null); });
+  }, [postId]);
+
+  const toggle = useCallback(async () => {
+    if (pendingRef.current) return;
+    pendingRef.current = true;
+    try {
+      const pb = getPocketBase();
+      const userId = pb.authStore.record!.id;
+      if (starred && starId) {
+        await pb.collection("post_stars").delete(starId);
+        setStarred(false);
+        setStarId(null);
+      } else {
+        const r = await pb.collection("post_stars").create({ post: postId, user: userId });
+        setStarred(true);
+        setStarId(r.id);
+      }
+    } finally {
+      pendingRef.current = false;
+    }
+  }, [postId, starred, starId]);
+
+  return { starred, toggle };
+}
