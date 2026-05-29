@@ -8,10 +8,38 @@ import Image from "next/image";
 import Link from "next/link";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 
+type Counts = Record<string, { likes: number; comments: number }>;
+
+function useCounts(ids: string[]): Counts {
+  const [counts, setCounts] = useState<Counts>({});
+  const key = ids.join(",");
+
+  useEffect(() => {
+    if (!ids.length) return;
+    const pb = getPocketBase();
+    if (!pb.authStore.isValid) return;
+    const filter = ids.map((id) => `post = "${id}"`).join(" || ");
+    Promise.all([
+      pb.collection("post_reactions").getFullList({ filter }),
+      pb.collection("post_comments").getFullList({ filter }),
+    ]).then(([reactions, comments]) => {
+      const c: Counts = {};
+      ids.forEach((id) => { c[id] = { likes: 0, comments: 0 }; });
+      reactions.forEach((r) => { if (c[r.post]) c[r.post].likes++; });
+      comments.forEach((r) => { if (c[r.post]) c[r.post].comments++; });
+      setCounts(c);
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  return counts;
+}
+
 export function HeroPostCard({ post }: { post: Post }) {
+  const counts = useCounts([post.id]);
   const images = (post.attachments ?? []).filter((f) => /\.(jpg|jpeg|png|gif|webp)$/i.test(f));
   const img = images[0];
-  const author = post.expand?.author;
+  const c = counts[post.id] ?? { likes: 0, comments: 0 };
 
   return (
     <div className="relative rounded-2xl overflow-hidden aspect-[16/9] bg-muted/40">
@@ -21,9 +49,7 @@ export function HeroPostCard({ post }: { post: Post }) {
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-primary/20 to-muted" />
       )}
-      {/* Dark overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-      {/* Content */}
       <div className="absolute bottom-0 left-0 right-0 p-6">
         <span className="text-[10px] font-bold uppercase tracking-widest bg-primary text-primary-foreground px-2.5 py-1 rounded-full">
           INTRANET
@@ -33,8 +59,8 @@ export function HeroPostCard({ post }: { post: Post }) {
         </h2>
         <div className="flex items-center gap-3 text-white/70 text-xs">
           <span>{formatDistanceToNow(post.created)}</span>
-          <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> 0</span>
-          <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" /> 0</span>
+          <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> {c.likes}</span>
+          <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" /> {c.comments}</span>
         </div>
       </div>
     </div>
@@ -42,6 +68,7 @@ export function HeroPostCard({ post }: { post: Post }) {
 }
 
 export function FromTheBlogCard({ posts }: { posts: Post[] }) {
+  const counts = useCounts(posts.map((p) => p.id));
   if (!posts.length) return null;
 
   return (
@@ -57,10 +84,10 @@ export function FromTheBlogCard({ posts }: { posts: Post[] }) {
           const images = (post.attachments ?? []).filter((f) => /\.(jpg|jpeg|png|gif|webp)$/i.test(f));
           const img = images[0];
           const excerpt = post.content.length > 90 ? post.content.slice(0, 90) + "…" : post.content;
+          const c = counts[post.id] ?? { likes: 0, comments: 0 };
 
           return (
             <div key={post.id} className="flex gap-4 px-5 py-5">
-              {/* Thumbnail */}
               <div className="w-24 h-20 rounded-xl overflow-hidden bg-muted shrink-0 relative">
                 {img ? (
                   <Image src={pbFileUrl("posts", post.id, img, "200x160")} alt=""
@@ -72,7 +99,6 @@ export function FromTheBlogCard({ posts }: { posts: Post[] }) {
                 )}
               </div>
 
-              {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">DIGITAL</span>
@@ -84,8 +110,8 @@ export function FromTheBlogCard({ posts }: { posts: Post[] }) {
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{excerpt}</p>
                 <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><Heart className="w-3 h-3 fill-current text-red-400" /> 0</span>
-                  <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3 text-green-400" /> 0</span>
+                  <span className="flex items-center gap-1"><Heart className="w-3 h-3 fill-current text-red-400" /> {c.likes}</span>
+                  <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3 text-green-400" /> {c.comments}</span>
                 </div>
               </div>
             </div>
