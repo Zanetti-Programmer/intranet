@@ -10,6 +10,7 @@ import { WhoIsOnlineCard } from "@/components/widgets/WhoIsOnlineCard";
 import { TopEventsCard } from "@/components/widgets/TopEventsCard";
 import { MiniCalendarWidget } from "@/components/widgets/MiniCalendarWidget";
 import { ProgressBarsCard } from "@/components/widgets/ProgressBarsCard";
+import { BirthdayWidget } from "@/components/widgets/BirthdayWidget";
 import { usePosts } from "@/lib/hooks/usePosts";
 import { useSpaces } from "@/lib/hooks/useSpaces";
 import { useAnnouncements } from "@/lib/hooks/useAnnouncements";
@@ -124,6 +125,9 @@ function FeedInner() {
 
             {/* Groups com tabs */}
             <SpacesWidget />
+
+            {/* Aniversariantes */}
+            <BirthdayWidget />
 
             {/* Who's Online */}
             <WhoIsOnlineCard />
