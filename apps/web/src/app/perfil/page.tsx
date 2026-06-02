@@ -28,12 +28,14 @@ export default function PerfilPage() {
   const pb = getPocketBase();
   const record = pb.authStore.record as (User & { id: string }) | null;
 
-  const [name, setName] = useState(record?.name ?? "");
-  const [bio, setBio] = useState(record?.bio ?? "");
+  const [name, setName]           = useState(record?.name ?? "");
+  const [bio, setBio]             = useState(record?.bio ?? "");
   const [department, setDepartment] = useState(record?.department ?? "");
-  const [phone, setPhone] = useState(record?.phone ?? "");
+  const [phone, setPhone]         = useState(record?.phone ?? "");
+  const [birthday, setBirthday]   = useState(record?.birthday?.slice(0, 10) ?? "");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [depts, setDepts] = useState<string[]>([]);
 
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -41,6 +43,12 @@ export default function PerfilPage() {
   const [savingPassword, setSavingPassword] = useState(false);
 
   const [stats, setStats] = useState({ posts: 0, achievements: 0, connections: 0 });
+
+  useEffect(() => {
+    pb.collection("departments").getFullList({ sort: "name" })
+      .then((r) => setDepts(r.map((d) => d.name as string)))
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!record?.id) return;
@@ -67,6 +75,7 @@ export default function PerfilPage() {
       formData.append("bio", bio.trim());
       formData.append("department", department.trim());
       formData.append("phone", phone.trim());
+      formData.append("birthday", birthday || "");
       if (avatarFile) formData.append("avatar", avatarFile);
 
       const updated = await pb.collection("users").update(record.id, formData);
@@ -175,13 +184,28 @@ export default function PerfilPage() {
             </div>
             <div>
               <Label className="text-xs">Departamento</Label>
-              <Input value={department} onChange={(e) => setDepartment(e.target.value)} className="mt-1 h-9" placeholder="Ex: Marketing" />
+              {depts.length > 0 ? (
+                <select value={department} onChange={(e) => setDepartment(e.target.value)}
+                  className="mt-1 w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                  <option value="">— Nenhum —</option>
+                  {depts.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              ) : (
+                <Input value={department} onChange={(e) => setDepartment(e.target.value)} className="mt-1 h-9" placeholder="Ex: Marketing" />
+              )}
             </div>
           </div>
 
-          <div>
-            <Label className="text-xs">Telefone</Label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 h-9" placeholder="(11) 9 0000-0000" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Telefone</Label>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 h-9" placeholder="(11) 9 0000-0000" />
+            </div>
+            <div>
+              <Label className="text-xs">Data de nascimento</Label>
+              <Input type="date" value={birthday} onChange={(e) => setBirthday(e.target.value)} className="mt-1 h-9" />
+              <p className="text-[10px] text-muted-foreground mt-1">Usada na página de aniversariantes</p>
+            </div>
           </div>
 
           <div>
