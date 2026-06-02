@@ -53,7 +53,7 @@ export function DayEventsPanel({ events, date, spaces, onDelete, onEdit, onClose
       <div className="space-y-2">
         {events.map((ev) => {
           const space = spaces.find((s) => s.id === ev.space);
-          const vis = VISIBILITY_CFG[ev.visibility ?? "publico"];
+          const vis = VISIBILITY_CFG[ev.visibility || "publico"];
           const VisIcon = vis.icon;
           const isOwner = ev.author === myId;
           const attendees = ev.expand?.attendees ?? [];
@@ -137,7 +137,7 @@ export function EventModal({ initialDate, initial, spaces, onSave, onClose }: Ev
   const [allDay, setAllDay]         = useState(initial?.all_day ?? false);
   const [color, setColor]           = useState(initial?.color ?? COLORS[0]);
   const [spaceId, setSpaceId]       = useState(initial?.space ?? "");
-  const [visibility, setVisibility] = useState<CalendarEvent["visibility"]>(initial?.visibility ?? "publico");
+  const [visibility, setVisibility] = useState<CalendarEvent["visibility"]>((initial?.visibility || "publico") as CalendarEvent["visibility"]);
   const [attendeeIds, setAttendeeIds] = useState<string[]>(initial?.attendees ?? []);
   const [loading, setLoading]       = useState(false);
 

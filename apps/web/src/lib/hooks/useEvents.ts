@@ -13,7 +13,7 @@ export interface CalendarEvent {
   color?: string;
   space?: string;
   author: string;
-  visibility: "publico" | "privado" | "convidados";
+  visibility: "publico" | "privado" | "convidados" | "";
   attendees?: string[];
   expand?: { space?: Space; attendees?: User[] };
 }
