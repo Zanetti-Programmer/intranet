@@ -307,7 +307,8 @@ function seedDefaultChannels() {
 function createEvents(spacesId) {
     const usersId = $app.dao().findCollectionByNameOrId("users").id
     const col = new Collection(); col.name = "events"; col.type = "base"
-    col.listRule = "@request.auth.id != ''"; col.viewRule = col.listRule
+    col.listRule = '@request.auth.id != "" && (visibility = "publico" || visibility = "" || @request.auth.id = author || (visibility = "convidados" && attendees ?= @request.auth.id))'
+    col.viewRule = col.listRule
     col.createRule = "@request.auth.id != ''"
     col.updateRule = "@request.auth.id = author.id || @request.auth.role = 'admin'"
     col.deleteRule = col.updateRule
@@ -317,7 +318,9 @@ function createEvents(spacesId) {
     col.schema.addField(new SchemaField({ name:"end", type:"date" }))
     col.schema.addField(new SchemaField({ name:"all_day", type:"bool" }))
     col.schema.addField(new SchemaField({ name:"color", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"visibility", type:"select", options:{maxSelect:1,values:["publico","privado","convidados"]} }))
     col.schema.addField(new SchemaField({ name:"author", type:"relation", required:true, options:{collectionId:usersId,maxSelect:1} }))
+    col.schema.addField(new SchemaField({ name:"attendees", type:"relation", options:{collectionId:usersId,maxSelect:null,cascadeDelete:false} }))
     if (spacesId) col.schema.addField(new SchemaField({ name:"space", type:"relation", options:{collectionId:spacesId,maxSelect:1} }))
     $app.dao().saveCollection(col)
 }

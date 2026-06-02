@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import getPocketBase from "@/lib/pocketbase";
-import type { Space } from "@/types";
+import type { Space, User } from "@/types";
 
 export interface CalendarEvent {
   id: string;
@@ -13,7 +13,9 @@ export interface CalendarEvent {
   color?: string;
   space?: string;
   author: string;
-  expand?: { space?: Space };
+  visibility: "publico" | "privado" | "convidados";
+  attendees?: string[];
+  expand?: { space?: Space; attendees?: User[] };
 }
 
 export function useEvents() {
@@ -25,7 +27,7 @@ export function useEvents() {
     if (!pb.authStore.isValid) return;
     try {
       const items = await pb.collection("events").getFullList({
-        sort: "start", expand: "space",
+        sort: "start", expand: "space,attendees",
       });
       setEvents(items as unknown as CalendarEvent[]);
     } catch { setEvents([]); }
@@ -35,11 +37,7 @@ export function useEvents() {
   useEffect(() => {
     fetch();
     const pb = getPocketBase();
-    pb.collection("events").subscribe("*", (e) => {
-      if (e.action === "create") setEvents((p) => [...p, e.record as unknown as CalendarEvent]);
-      else if (e.action === "delete") setEvents((p) => p.filter((ev) => ev.id !== e.record.id));
-      else if (e.action === "update") setEvents((p) => p.map((ev) => ev.id === e.record.id ? { ...ev, ...e.record } as CalendarEvent : ev));
-    }).catch(() => {});
+    pb.collection("events").subscribe("*", () => fetch()).catch(() => {});
     return () => { pb.collection("events").unsubscribe("*").catch(() => {}); };
   }, [fetch]);
 
@@ -48,9 +46,13 @@ export function useEvents() {
     await pb.collection("events").create({ ...data, author: pb.authStore.record!.id });
   }, []);
 
+  const updateEvent = useCallback(async (id: string, data: Omit<CalendarEvent, "id" | "author" | "expand">) => {
+    await getPocketBase().collection("events").update(id, data);
+  }, []);
+
   const deleteEvent = useCallback(async (id: string) => {
     await getPocketBase().collection("events").delete(id);
   }, []);
 
-  return { events, loading, createEvent, deleteEvent };
+  return { events, loading, createEvent, updateEvent, deleteEvent };
 }
