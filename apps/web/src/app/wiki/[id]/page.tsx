@@ -8,7 +8,8 @@ import { DashboardLayout } from "../../layout-dashboard";
 import { RichTextContent } from "@/components/ui/RichTextContent";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import getPocketBase from "@/lib/pocketbase";
-import { ArrowLeft, Loader2, Pencil, Trash2, Check, X, Paperclip, Download } from "lucide-react";
+import { ArrowLeft, Loader2, Pencil, Trash2, Check, X, Paperclip, Download, ThumbsUp } from "lucide-react";
+import { useBlogLike } from "@/app/blog/useBlogLike";
 import { Button } from "@/components/ui/button";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { Label } from "@/components/ui/label";
@@ -40,6 +41,8 @@ export default function WikiArticlePage() {
 
   const myRole = (getPocketBase().authStore.record as { role?: string })?.role;
   const canManage = myRole === "admin" || myRole === "rh";
+
+  const { liked, count: likeCount, toggle: toggleLike } = useBlogLike(id);
 
   useEffect(() => {
     if (!id) return;
@@ -164,6 +167,21 @@ export default function WikiArticlePage() {
                   ? <RichTextContent html={article.content} className="text-base leading-relaxed" />
                   : <p className="text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{article.content}</p>
                 }
+              </div>
+            )}
+
+            {/* Like */}
+            {!editing && (
+              <div className="border-t border-border/50 pt-4">
+                <button onClick={() => void toggleLike()}
+                  className={cn("flex items-center gap-2 text-sm font-medium transition-colors px-3 py-2 rounded-lg",
+                    liked
+                      ? "text-emerald-500 bg-emerald-500/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted")}>
+                  <ThumbsUp className={cn("w-4 h-4", liked && "fill-emerald-500")} strokeWidth={1.8} />
+                  {liked ? "Artigo útil" : "Marcar como útil"}
+                  {likeCount > 0 && <span className="ml-1 text-xs opacity-70">({likeCount})</span>}
+                </button>
               </div>
             )}
 

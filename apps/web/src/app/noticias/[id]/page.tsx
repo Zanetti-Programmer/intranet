@@ -8,9 +8,11 @@ import { DashboardLayout } from "../../layout-dashboard";
 import { RichTextContent } from "@/components/ui/RichTextContent";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { CommentSection } from "@/components/feed/CommentSection";
+import { useBlogLike } from "@/app/blog/useBlogLike";
 import getPocketBase from "@/lib/pocketbase";
 import { pbFileUrl } from "@/lib/utils";
-import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2, Heart, MessageCircle, Share2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Article } from "@/types";
 
@@ -22,9 +24,13 @@ export default function NoticiaPage() {
 
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
 
   const myRole = (getPocketBase().authStore.record as { role?: string })?.role;
   const canDelete = myRole === "admin" || myRole === "rh";
+
+  const { liked, count: likeCount, toggle: toggleLike } = useBlogLike(id);
 
   useEffect(() => {
     if (!id) return;
@@ -34,7 +40,14 @@ export default function NoticiaPage() {
       .then((r) => setArticle(r as unknown as Article))
       .catch(() => router.push("/noticias"))
       .finally(() => setLoading(false));
+    pb.collection("post_comments").getList(1, 1, { filter: `post = "${id}"` })
+      .then((r) => setCommentCount(r.totalItems)).catch(() => {});
   }, [id, router]);
+
+  function handleShare() {
+    navigator.clipboard.writeText(window.location.href)
+      .then(() => toast.success("Link copiado!")).catch(() => {});
+  }
 
   async function handleDelete() {
     if (!article || !confirm("Excluir esta notícia?")) return;
@@ -66,7 +79,6 @@ export default function NoticiaPage() {
   return (
     <DashboardLayout pathname={pathname}>
       <div className="max-w-3xl mx-auto px-5 py-6">
-        {/* Back */}
         <button onClick={() => router.push("/noticias")}
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Voltar para Notícias
@@ -118,10 +130,33 @@ export default function NoticiaPage() {
             }
           </div>
 
+          {/* Actions */}
+          <div className="mt-6 border-t border-border pt-4 flex items-center gap-5">
+            <button onClick={() => void toggleLike()}
+              className={cn("flex items-center gap-1.5 text-sm transition-colors",
+                liked ? "text-red-500" : "text-muted-foreground hover:text-foreground")}>
+              <Heart className={cn("w-4 h-4", liked && "fill-red-500")} strokeWidth={1.8} />
+              Curtir{likeCount > 0 ? ` ${likeCount}` : ""}
+            </button>
+            <button onClick={() => setCommentsOpen((v) => !v)}
+              className={cn("flex items-center gap-1.5 text-sm transition-colors",
+                commentsOpen ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
+              <MessageCircle className="w-4 h-4" strokeWidth={1.8} />
+              Comentar{commentCount > 0 ? ` (${commentCount})` : ""}
+            </button>
+            <button onClick={handleShare}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Share2 className="w-4 h-4" strokeWidth={1.8} /> Compartilhar
+            </button>
+          </div>
+
           {/* Comments */}
-          <div className="mt-8 border-t border-border pt-6">
-            <p className="text-sm font-semibold mb-4">Comentários</p>
-            <CommentSection postId={article.id} open={true} canDeleteAny={canDelete} />
+          <div className="mt-6 border-t border-border pt-6">
+            <p className="text-sm font-semibold mb-4">
+              Comentários{commentCount > 0 ? ` (${commentCount})` : ""}
+            </p>
+            <CommentSection postId={article.id} open={true} canDeleteAny={canDelete}
+              onCommentAdded={() => setCommentCount((c) => c + 1)} />
           </div>
         </motion.article>
       </div>

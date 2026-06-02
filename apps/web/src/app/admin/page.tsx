@@ -7,13 +7,81 @@ import { motion } from "framer-motion";
 import { DashboardLayout } from "../layout-dashboard";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { Input } from "@/components/ui/input";
-import { Loader2, Search, ShieldCheck } from "lucide-react";
+import { Loader2, Search, ShieldCheck, Plus, X } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import getPocketBase from "@/lib/pocketbase";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { User } from "@/types";
 
 const ROLES = ["user", "rh", "ti", "admin"] as const;
+
+function NewUserModal({ onCreated, onClose }: { onCreated: (u: User) => void; onClose: () => void }) {
+  const [name, setName]         = useState("");
+  const [email, setEmail]       = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole]         = useState<User["role"]>("user");
+  const [dept, setDept]         = useState("");
+  const [saving, setSaving]     = useState(false);
+
+  async function handleCreate() {
+    if (!name.trim() || !email.trim() || password.length < 8) return;
+    setSaving(true);
+    try {
+      const pb = getPocketBase();
+      const r = await pb.collection("users").create({
+        name, email, password, passwordConfirm: password, role, department: dept,
+      });
+      toast.success(`Usuário ${name} criado!`);
+      onCreated(r as unknown as User);
+      onClose();
+    } catch (e: unknown) {
+      const msg = (e as { data?: { email?: { message?: string } } })?.data?.email?.message;
+      toast.error(msg ?? "Erro ao criar usuário.");
+    } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
+      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-card border border-border rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold">Novo usuário</h3>
+          <button onClick={onClose}><X className="w-4 h-4 text-muted-foreground" /></button>
+        </div>
+
+        <div className="space-y-3">
+          <div><Label className="text-xs">Nome *</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 h-9" autoFocus /></div>
+          <div><Label className="text-xs">E-mail *</Label>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 h-9" /></div>
+          <div><Label className="text-xs">Senha * (mínimo 8 caracteres)</Label>
+            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 h-9" /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label className="text-xs">Role</Label>
+              <select value={role} onChange={(e) => setRole(e.target.value as User["role"])}
+                className="mt-1 w-full h-9 rounded-md border border-input bg-transparent px-2 text-sm focus:outline-none">
+                {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+              </select>
+            </div>
+            <div><Label className="text-xs">Departamento</Label>
+              <Input value={dept} onChange={(e) => setDept(e.target.value)} className="mt-1 h-9" /></div>
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button onClick={onClose} className="flex-1 h-9 rounded-lg border border-border text-sm hover:bg-muted transition-colors">Cancelar</button>
+          <button onClick={() => void handleCreate()}
+            disabled={saving || !name.trim() || !email.trim() || password.length < 8}
+            className="flex-1 h-9 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : "Criar"}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 const ROLE_LABELS: Record<string, string> = { user: "Usuário", rh: "RH", ti: "TI", admin: "Admin" };
 const ROLE_BADGE: Record<string, string> = {
   admin: "bg-purple-500/15 text-purple-400",
@@ -37,6 +105,7 @@ export default function AdminPage() {
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
   const [editDept, setEditDept] = useState<Record<string, string>>({});
+  const [showNewUser, setShowNewUser] = useState(false);
 
   useEffect(() => {
     if (myRole !== "admin") return;
@@ -90,14 +159,20 @@ export default function AdminPage() {
   return (
     <DashboardLayout pathname={pathname}>
       <div className="max-w-5xl mx-auto px-5 py-6 space-y-5">
-        <div>
-          <h1 className="text-xl font-semibold flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-primary" />
-            Painel Admin
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Gerenciar usuários, roles e departamentos
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-primary" />
+              Painel Admin
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Gerenciar usuários, roles e departamentos
+            </p>
+          </div>
+          <button onClick={() => setShowNewUser(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+            <Plus className="w-4 h-4" /> Novo usuário
+          </button>
         </div>
 
         <div className="relative">
@@ -178,6 +253,16 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {showNewUser && (
+        <NewUserModal
+          onCreated={(u) => {
+            setUsers((prev) => [...prev, u]);
+            setEditDept((prev) => ({ ...prev, [u.id]: u.department ?? "" }));
+          }}
+          onClose={() => setShowNewUser(false)}
+        />
+      )}
     </DashboardLayout>
   );
 }

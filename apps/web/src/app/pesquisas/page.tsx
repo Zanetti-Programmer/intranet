@@ -23,6 +23,16 @@ function timeAgo(d: string) {
   return new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" });
 }
 
+function deadlineLabel(d?: string | null): { text: string; cls: string } | null {
+  if (!d) return null;
+  const diff = new Date(d).getTime() - Date.now();
+  const days = Math.ceil(diff / 86400000);
+  if (diff < 0) return { text: `Encerrou ${Math.abs(days)}d atrás`, cls: "text-red-400" };
+  if (days === 0) return { text: "Encerra hoje!", cls: "text-amber-400" };
+  if (days === 1) return { text: "Encerra amanhã", cls: "text-amber-400" };
+  return { text: `${days} dias restantes`, cls: "text-muted-foreground" };
+}
+
 function PollCard({ poll, voteCounts, voted, votedIdx, totalVotes, onVote, onClose, canManage, index }: {
   poll: Poll; voteCounts: number[]; voted: boolean; votedIdx: number;
   totalVotes: number; onVote: (pollId: string, idx: number) => void;
@@ -86,13 +96,18 @@ function PollCard({ poll, voteCounts, voted, votedIdx, totalVotes, onVote, onClo
         })}
       </div>
 
-      <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/50">
+      <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/50 flex-wrap gap-1">
         <span>{totalVotes} {totalVotes === 1 ? "voto" : "votos"}</span>
-        <span>
-          {voted && poll.status === "ativa" && "Você já votou ✓"}
-          {poll.deadline && ` · Prazo: ${new Date(poll.deadline).toLocaleDateString("pt-BR")}`}
-          {isExpired && poll.status === "ativa" && " · Expirada"}
-        </span>
+        <div className="flex items-center gap-2">
+          {voted && poll.status === "ativa" && !isExpired && (
+            <span className="text-emerald-400">Você já votou ✓</span>
+          )}
+          {(() => {
+            const dl = deadlineLabel(poll.deadline);
+            if (!dl || poll.status === "encerrada") return null;
+            return <span className={dl.cls}>{dl.text}</span>;
+          })()}
+        </div>
         {author && <span>{author.name} · {timeAgo(poll.created)}</span>}
       </div>
     </motion.div>
@@ -177,6 +192,16 @@ export default function PesquisasPage() {
     const role = (getPocketBase().authStore.record as { role?: string })?.role;
     setCanCreate(role === "admin" || role === "rh");
   }, []);
+
+  // Auto-close expired polls for managers
+  useEffect(() => {
+    if (!canCreate || !polls.length) return;
+    polls.forEach((p) => {
+      if (p.status === "ativa" && p.deadline && new Date(p.deadline) < new Date()) {
+        closePoll(p.id).catch(() => {});
+      }
+    });
+  }, [polls, canCreate, closePoll]);
 
   const filtered = useMemo(() =>
     filter === "all" ? polls : polls.filter((p) => p.status === filter),
