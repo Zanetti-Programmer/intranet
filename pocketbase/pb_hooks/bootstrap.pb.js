@@ -64,6 +64,7 @@ try {
             createTicketComments(ticketsId)
             createAchievements()
             createNotifications()
+            createDepartments()
         } catch (err) { console.error("[setup] Erro ferramentas:", err) }
     }
 
@@ -304,6 +305,17 @@ function seedDefaultChannels() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // GRUPO 3 — FERRAMENTAS
 // ═══════════════════════════════════════════════════════════════════════════════
+function createDepartments() {
+    const col = new Collection(); col.name = "departments"; col.type = "base"
+    col.listRule = "@request.auth.id != ''"; col.viewRule = col.listRule
+    col.createRule = "@request.auth.role = 'admin'"
+    col.updateRule = "@request.auth.role = 'admin'"
+    col.deleteRule = "@request.auth.role = 'admin'"
+    col.schema.addField(new SchemaField({ name:"name",        type:"text", required:true }))
+    col.schema.addField(new SchemaField({ name:"description", type:"text" }))
+    col.schema.addField(new SchemaField({ name:"color",       type:"text" }))
+    $app.dao().saveCollection(col)
+}
 function createEvents(spacesId) {
     const usersId = $app.dao().findCollectionByNameOrId("users").id
     const col = new Collection(); col.name = "events"; col.type = "base"
