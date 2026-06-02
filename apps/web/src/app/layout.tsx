@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   title: "Intranet",
   description: "Portal interno da empresa",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icon.png",
+    apple: "/icons/apple-icon-180.png",
+  },
   appleWebApp: {
     capable: true,
     title: "Intranet",
@@ -27,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR" suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full`}>
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" href="/icons/apple-icon-180.png" />
       </head>
       <body className="h-full bg-background text-foreground antialiased">
         <Providers>{children}</Providers>
