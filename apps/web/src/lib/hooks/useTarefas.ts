@@ -55,10 +55,15 @@ export function useTasks(view: "minhas" | "time" | "criadas") {
     setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status } : t));
   }, []);
 
+  const updateTask = useCallback(async (id: string, data: Partial<Pick<Task, "title" | "description" | "priority" | "due_date" | "assignee" | "is_team" | "status">>) => {
+    await getPocketBase().collection("tasks").update(id, data);
+    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...data } : t));
+  }, []);
+
   const deleteTask = useCallback(async (id: string) => {
     await getPocketBase().collection("tasks").delete(id);
     setTasks((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  return { tasks, loading, createTask, updateStatus, deleteTask };
+  return { tasks, loading, createTask, updateStatus, updateTask, deleteTask };
 }
