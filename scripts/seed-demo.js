@@ -86,6 +86,7 @@ async function seed() {
   console.log("👥 Criando usuários...");
   const userDefs = [
     { name:"Guilherme Zanetti",    email:"guilherme@empresa.com", role:"admin", department:"TI",         phone:"(11) 99999-0001", bio:"CTO e desenvolvedor full stack. Apaixonado por tecnologia e inovação." },
+    { name:"Fred",                 email:"fred@empresa.com",      role:"admin", department:"Diretoria",  phone:"(11) 99999-0009", bio:"Diretor geral e cofundador da empresa." },
     { name:"Ana Paula Santos",     email:"ana.paula@empresa.com", role:"rh",    department:"RH",         phone:"(11) 99999-0002", bio:"Gestora de pessoas com 8 anos de experiência em RH estratégico." },
     { name:"Carlos Mendes",        email:"carlos@empresa.com",    role:"ti",    department:"TI",         phone:"(11) 99999-0003", bio:"Analista de sistemas e especialista em suporte técnico." },
     { name:"Fernanda Costa",       email:"fernanda@empresa.com",  role:"user",  department:"Comercial",  phone:"(11) 99999-0004", bio:"Executiva de contas com foco em grandes clientes." },
@@ -109,6 +110,7 @@ async function seed() {
   }
 
   const guiId  = users["guilherme@empresa.com"];
+  const fredId = users["fred@empresa.com"];
   const anaId  = users["ana.paula@empresa.com"];
   const carId  = users["carlos@empresa.com"];
   const ferId  = users["fernanda@empresa.com"];
