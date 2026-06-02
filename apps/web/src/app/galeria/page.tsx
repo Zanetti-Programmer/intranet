@@ -9,6 +9,7 @@ import { InstagramWidget } from "@/components/gallery/InstagramWidget";
 import { useGallery, useAlbumPhotos } from "@/lib/hooks/useGallery";
 import { pbFileUrl, formatDistanceToNow, compressImage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { GridSkeleton } from "@/components/ui/skeleton";
 import { Plus, Upload, ArrowLeft, Loader2, Image as ImageIcon, X, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -21,7 +22,7 @@ export default function GaleriaPage() {
   const [showNewAlbum, setShowNewAlbum] = useState(false);
   const [newAlbumName, setNewAlbumName] = useState("");
   const [newAlbumEvent, setNewAlbumEvent] = useState("");
-  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -34,16 +35,16 @@ export default function GaleriaPage() {
 
   async function handleUpload(files: FileList | File[]) {
     if (!activeAlbum || !files.length) return;
-    setUploading(true);
+    const imageFiles = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (!imageFiles.length) { toast.error("Selecione apenas imagens (JPG, PNG, GIF, WebP)."); return; }
+    setUploadProgress({ current: 0, total: imageFiles.length });
     try {
-      const imageFiles = Array.from(files).filter((f) => f.type.startsWith("image/"));
-      if (!imageFiles.length) { toast.error("Selecione apenas imagens (JPG, PNG, GIF, WebP)."); return; }
       const compressed = await Promise.all(imageFiles.map((f) => compressImage(f, 30)));
-      await uploadPhotos(activeAlbum, compressed);
-      toast.success(`${compressed.length} foto${compressed.length > 1 ? "s" : ""} enviada${compressed.length > 1 ? "s" : ""}!`);
+      await uploadPhotos(activeAlbum, compressed, (current, total) => setUploadProgress({ current, total }));
+      toast.success(`${imageFiles.length} foto${imageFiles.length > 1 ? "s" : ""} enviada${imageFiles.length > 1 ? "s" : ""}!`);
     } catch {
       toast.error("Erro ao enviar fotos. Verifique o formato (JPG, PNG, GIF, WebP).");
-    } finally { setUploading(false); }
+    } finally { setUploadProgress(null); }
   }
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -75,9 +76,11 @@ export default function GaleriaPage() {
               <Plus className="w-4 h-4" /> Novo álbum
             </Button>
           ) : (
-            <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${uploading ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}>
-              {uploading ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Enviando...</> : <><Upload className="w-3.5 h-3.5" /> Adicionar fotos</>}
-              <input type="file" accept="image/*" multiple className="hidden" disabled={uploading}
+            <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${uploadProgress ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}>
+              {uploadProgress
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {uploadProgress.current}/{uploadProgress.total}</>
+                : <><Upload className="w-3.5 h-3.5" /> Adicionar fotos</>}
+              <input type="file" accept="image/*" multiple className="hidden" disabled={!!uploadProgress}
                 onChange={(e) => { if (e.target.files) void handleUpload(e.target.files); }} />
             </label>
           )}
@@ -102,7 +105,7 @@ export default function GaleriaPage() {
         {!activeAlbum ? (
           <>
             {albumsLoading ? (
-              <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+              <GridSkeleton cols={4} count={8} />
             ) : albums.length === 0 ? (
               <div className="text-center py-16 space-y-2">
                 <p className="text-4xl">📷</p>
@@ -147,7 +150,7 @@ export default function GaleriaPage() {
             onDragLeave={() => setDragOver(false)} onDrop={handleDrop}
             className={`transition-all rounded-xl ${dragOver ? "ring-2 ring-primary bg-primary/5 p-2" : ""}`}>
             {photosLoading ? (
-              <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+              <GridSkeleton cols={4} count={12} />
             ) : photos.length === 0 ? (
               <div className="text-center py-16 border-2 border-dashed border-border rounded-xl space-y-3">
                 <Upload className="w-10 h-10 text-muted-foreground/30 mx-auto" />

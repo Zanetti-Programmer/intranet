@@ -9,6 +9,7 @@ import { AchievementCard } from "@/components/achievements/AchievementCard";
 import { NewAchievementModal } from "@/components/achievements/NewAchievementModal";
 import { useAchievements } from "@/lib/hooks/useAchievements";
 import { Button } from "@/components/ui/button";
+import { ListRowSkeleton } from "@/components/ui/skeleton";
 import { Plus, Loader2 } from "lucide-react";
 import getPocketBase from "@/lib/pocketbase";
 
@@ -42,7 +43,7 @@ export default function ConquistasPage() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{Array.from({length:6}).map((_,i)=><ListRowSkeleton key={i}/>)}</div>
         ) : achievements.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16 space-y-2">
             <p className="text-4xl">🏆</p>

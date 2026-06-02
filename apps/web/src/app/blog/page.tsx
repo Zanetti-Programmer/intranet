@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
+import { CardSkeleton } from "@/components/ui/skeleton";
 import { RichTextContent } from "@/components/ui/RichTextContent";
 import { Plus, Loader2, Search, BookOpen, X, Image as ImageIcon, Trash2, Eye, Pencil, Check, ExternalLink, Heart, MessageCircle, Share2 } from "lucide-react";
 import { useBlogLike } from "./useBlogLike";
@@ -497,7 +498,7 @@ export default function BlogPage() {
 
             {/* Post list */}
             {loading ? (
-              <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+              <div className="space-y-4">{Array.from({length:4}).map((_,i)=><CardSkeleton key={i}/>)}</div>
             ) : filtered.length === 0 ? (
               <div className="text-center py-16 space-y-2">
                 <p className="text-4xl">✍️</p>

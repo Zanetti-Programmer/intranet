@@ -9,6 +9,7 @@ import { AnnouncementCard } from "@/components/announcements/AnnouncementCard";
 import { NewAnnouncementModal } from "@/components/announcements/NewAnnouncementModal";
 import { useAnnouncements } from "@/lib/hooks/useAnnouncements";
 import { Button } from "@/components/ui/button";
+import { ListRowSkeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Plus, Loader2, Search, Megaphone } from "lucide-react";
 import getPocketBase from "@/lib/pocketbase";
@@ -93,9 +94,7 @@ export default function AvisosPage() {
 
         {/* Content */}
         {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          </div>
+          <div className="space-y-3">{Array.from({length:4}).map((_,i)=><ListRowSkeleton key={i}/>)}</div>
         ) : filtered.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}

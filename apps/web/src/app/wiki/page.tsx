@@ -8,6 +8,7 @@ import { DashboardLayout } from "../layout-dashboard";
 import { useWiki } from "@/lib/hooks/useWiki";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { Button } from "@/components/ui/button";
+import { ListRowSkeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
@@ -206,7 +207,7 @@ export default function WikiPage() {
           ))}
         </div>
 
-        {loading ? <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+        {loading ? <div className="space-y-2">{Array.from({length:6}).map((_,i)=><ListRowSkeleton key={i}/>)}</div>
           : filtered.length === 0 ? (
             <div className="text-center py-16 space-y-2">
               <p className="text-4xl">📚</p>

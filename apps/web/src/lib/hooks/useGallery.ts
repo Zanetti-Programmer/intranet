@@ -102,16 +102,20 @@ export function useAlbumPhotos(albumId: string | null) {
     if (albumId) loadPage(albumId, pageRef.current + 1);
   }, [albumId, loadPage]);
 
-  const uploadPhotos = useCallback(async (albumId: string, files: File[]) => {
+  const uploadPhotos = useCallback(async (
+    albumId: string, files: File[],
+    onProgress?: (current: number, total: number) => void,
+  ) => {
     const pb = getPocketBase();
     const uploaded: GalleryPhoto[] = [];
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
       const formData = new FormData();
       formData.append("album", albumId);
-      formData.append("file", file);
+      formData.append("file", files[i]);
       formData.append("author", pb.authStore.record!.id);
       const r = await pb.collection("gallery_photos").create(formData, { expand: "author" });
       uploaded.push(r as unknown as GalleryPhoto);
+      onProgress?.(i + 1, files.length);
     }
     setPhotos((p) => [...p, ...uploaded]);
   }, []);

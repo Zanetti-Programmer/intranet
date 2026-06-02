@@ -8,6 +8,7 @@ import { DashboardLayout } from "../layout-dashboard";
 import { useArticles } from "@/lib/hooks/useArticles";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { Button } from "@/components/ui/button";
+import { CardSkeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Loader2, Search, X, Image as ImageIcon, Trash2, Eye, Pencil, Check, Clock } from "lucide-react";
@@ -430,7 +431,7 @@ export default function NoticiasPage() {
 
         {/* ── Content ── */}
         {loading ? (
-          <div className="flex justify-center py-20"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+          <div className="space-y-3">{Array.from({length:5}).map((_,i)=><CardSkeleton key={i}/>)}</div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-20 space-y-3">
             <p className="text-5xl">📰</p>

@@ -7,6 +7,18 @@ import { motion } from "framer-motion";
 import { DashboardLayout } from "../layout-dashboard";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { Loader2, GitBranch, MessageSquare, Info, Pencil, X } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+function OrgCardSkeleton() {
+  return (
+    <div className="w-[120px] bg-card border border-border rounded-xl p-3 flex flex-col items-center gap-2">
+      <Skeleton className="w-10 h-10 rounded-full" />
+      <Skeleton className="h-3 w-16" />
+      <Skeleton className="h-3 w-12" />
+      <Skeleton className="h-4 w-10 rounded-full" />
+    </div>
+  );
+}
 import { toast } from "sonner";
 import getPocketBase from "@/lib/pocketbase";
 import { useChannels } from "@/lib/hooks/useChannels";
@@ -277,8 +289,13 @@ export default function OrganogramaPage() {
         )}
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          <div className="flex gap-8 justify-center pt-8">
+            {Array.from({length:3}).map((_,i)=>(
+              <div key={i} className="flex flex-col items-center gap-2">
+                <OrgCardSkeleton />
+                {i===1 && <div className="flex gap-4 mt-2">{Array.from({length:3}).map((_,j)=><OrgCardSkeleton key={j}/>)}</div>}
+              </div>
+            ))}
           </div>
         ) : hasTree ? (
           <div className="overflow-x-auto pb-4">
