@@ -125,8 +125,10 @@ function patchUsersCollection() {
         ]
         let changed = false
         extras.forEach(function(f) { if (!existing.includes(f.name)) { users.schema.addField(new SchemaField(f)); changed = true } })
-        const desiredRule = "@request.auth.id = id"
+        const desiredRule = "@request.auth.id = id || @request.auth.role = 'admin'"
         if (users.updateRule !== desiredRule) { users.updateRule = desiredRule; changed = true }
+        const desiredDeleteRule = "@request.auth.id = id || @request.auth.role = 'admin'"
+        if (users.deleteRule !== desiredDeleteRule) { users.deleteRule = desiredDeleteRule; changed = true }
         // Allow authenticated users to see all colleagues (needed for organogram, people page, etc.)
         const desiredListRule = "@request.auth.id != ''"
         if (users.listRule !== desiredListRule) { users.listRule = desiredListRule; changed = true }
