@@ -112,6 +112,7 @@ export interface Ticket {
   status: "aberto" | "em_andamento" | "resolvido" | "fechado";
   category: "hardware" | "software" | "rede" | "acesso" | "outro";
   priority: "baixa" | "media" | "alta" | "urgente";
+  due_date?: string;
   created: string;
   updated: string;
 }

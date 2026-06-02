@@ -63,7 +63,12 @@ export function useTickets(statusFilter?: string) {
     await fetch();
   }, [fetch]);
 
-  return { tickets, loading, createTicket, updateStatus, assignTicket, refetch: fetch };
+  const updateTicket = useCallback(async (id: string, data: Partial<Pick<Ticket, "priority" | "assignee" | "due_date" | "status">>) => {
+    await getPocketBase().collection("tickets").update(id, data);
+    setTickets((prev) => prev.map((t) => t.id === id ? { ...t, ...data } : t));
+  }, []);
+
+  return { tickets, loading, createTicket, updateStatus, assignTicket, updateTicket, refetch: fetch };
 }
 
 export function useTicketComments(ticketId: string) {
